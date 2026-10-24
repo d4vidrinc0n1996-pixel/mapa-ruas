@@ -1,0 +1,11 @@
+{
+  "name": "mapa-ruas",
+  "version": "0.1.0",
+  "description": "PWA multiplataforma para visualizar zonas de vuelo de drones con visor GPS",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}

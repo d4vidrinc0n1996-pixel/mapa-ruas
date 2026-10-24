@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="Zonas permitidas y restringidas para volar drones, con tu posición GPS en tiempo real." />
+    <title>Mapa RUAS</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <div id="map" aria-label="Mapa de zonas de vuelo"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <img src="icons/icon.svg" alt="" width="28" height="28" />
+        <span>Mapa RUAS</span>
+      </div>
+      <form id="search" class="search" role="search" autocomplete="off">
+        <input id="search-input" type="search" placeholder="Buscar lugar o lat, lon" aria-label="Buscar lugar o coordenadas" />
+      </form>
+      <select id="country" aria-label="País"></select>
+    </header>
+    <ul id="search-results" class="search-results" hidden></ul>
+
+    <div id="busy" class="busy" hidden><span class="spinner"></span>Cargando capas oficiales…</div>
+
+    <div class="fab-stack">
+      <button id="btn-layers" class="fab" type="button" aria-label="Capas" title="Capas">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5-10-5Z" /><path d="m2 13 10 5 10-5" /><path d="m2 17.5 10 5 10-5" opacity=".5" /></svg>
+      </button>
+      <button id="btn-info" class="fab" type="button" aria-label="Normativa e información" title="Normativa">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5" /><path d="M12 11v6M12 7.5v.01" /></svg>
+      </button>
+      <button id="btn-locate" class="fab fab-primary" type="button" aria-label="Mi ubicación" title="Mi ubicación (GPS)">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="8" /></svg>
+      </button>
+    </div>
+
+    <section id="sheet" class="sheet" aria-live="polite">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div id="status" class="status" data-level="idle" role="button" tabindex="0"></div>
+      <div class="sheet-body">
+        <div id="hits"></div>
+        <div id="gps" class="gps-panel" hidden></div>
+        <p class="rules-line" id="rules-line"></p>
+      </div>
+    </section>
+
+    <aside id="panel-layers" class="panel" hidden aria-label="Capas">
+      <header class="panel-head">
+        <h2>Capas</h2>
+        <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+      </header>
+      <h3>Mapa base</h3>
+      <div id="base-layers" class="segmented"></div>
+      <h3>Zonas</h3>
+      <div id="layer-list" class="layer-list"></div>
+      <h3>Zonas propias</h3>
+      <p class="muted small">
+        Importa un GeoJSON con polígonos o puntos. Propiedades: <code>name</code>, <code>category</code>
+        (prohibited, restricted, limited, caution), <code>radius_m</code>, <code>note</code>.
+      </p>
+      <div class="row">
+        <label class="btn">
+          Importar GeoJSON
+          <input id="import-file" type="file" accept=".geojson,.json,application/geo+json,application/json" hidden />
+        </label>
+        <button id="clear-custom" class="btn ghost" type="button" hidden>Quitar importadas</button>
+      </div>
+      <p id="data-source" class="muted small"></p>
+    </aside>
+
+    <aside id="panel-info" class="panel" hidden aria-label="Normativa">
+      <header class="panel-head">
+        <h2 id="info-title">Normativa</h2>
+        <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+      </header>
+      <div id="info-body"></div>
+      <div class="legend">
+        <h3>Leyenda</h3>
+        <ul>
+          <li><span class="swatch" style="--c: var(--prohibited)"></span>Prohibido</li>
+          <li><span class="swatch" style="--c: var(--restricted)"></span>Requiere autorización / coordinación</li>
+          <li><span class="swatch" style="--c: var(--limited)"></span>Altura limitada</li>
+          <li><span class="swatch dot" style="--c: var(--info)"></span>Punto de referencia (aeropuerto / helipuerto)</li>
+        </ul>
+      </div>
+      <p class="disclaimer">
+        Mapa RUAS es una herramienta informativa basada en datos públicos de la autoridad aeronáutica. Puede haber
+        restricciones temporales (NOTAM, eventos) o cambios no reflejados aquí. No reemplaza la normativa vigente ni las
+        autorizaciones requeridas: el piloto es responsable de cada vuelo.
+      </p>
+      <button id="btn-install" class="btn" type="button" hidden>Instalar app</button>
+      <p class="muted small" id="install-hint">En iPhone: botón Compartir → «Agregar a pantalla de inicio».</p>
+    </aside>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

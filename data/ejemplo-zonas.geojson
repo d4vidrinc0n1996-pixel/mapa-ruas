@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Evento masivo (ejemplo)",
+        "category": "prohibited",
+        "radius_m": 800,
+        "note": "Zona temporal de ejemplo: concierto en el estadio."
+      },
+      "geometry": { "type": "Point", "coordinates": [-74.0773, 4.6459] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Finca con permiso del propietario (ejemplo)",
+        "category": "caution",
+        "note": "Volar sólo con autorización del propietario."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-73.95, 4.95],
+            [-73.93, 4.95],
+            [-73.93, 4.97],
+            [-73.95, 4.97],
+            [-73.95, 4.95]
+          ]
+        ]
+      }
+    }
+  ]
+}
