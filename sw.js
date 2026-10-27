@@ -1,8 +1,8 @@
 // Service worker: app instalable y uso sin conexión con los últimos datos descargados.
 
-const SHELL_CACHE = 'mapa-ruas-shell-v1';
-const DATA_CACHE = 'mapa-ruas-data-v1';
-const TILE_CACHE = 'mapa-ruas-tiles-v1';
+const SHELL_CACHE = 'mapa-ruas-shell-v2';
+const DATA_CACHE = 'mapa-ruas-data-v2';
+const TILE_CACHE = 'mapa-ruas-tiles-v2';
 const MAX_TILES = 2000;
 
 const SHELL = [
@@ -10,6 +10,8 @@ const SHELL = [
   'index.html',
   'css/app.css',
   'js/app.js',
+  'js/basemaps.js',
+  'js/conditions.js',
   'js/geo.js',
   'js/gps.js',
   'js/render.js',
@@ -18,6 +20,8 @@ const SHELL = [
   'js/zones.js',
   'js/countries/index.js',
   'js/countries/co.js',
+  'js/countries/es.js',
+  'js/countries/us.js',
   'manifest.webmanifest',
   'icons/icon.svg',
   'icons/icon-192.png',
@@ -26,7 +30,16 @@ const SHELL = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 ];
 
+// Sólo se guardan teselas de proveedores gratuitos: Mapbox, MapTiler y Google no
+// permiten almacenarlas fuera de línea.
 const TILE_HOSTS = /(^|\.)tile\.openstreetmap\.org$|^server\.arcgisonline\.com$|(^|\.)tile\.opentopomap\.org$/;
+
+// Zonas oficiales, clima e índice Kp: red primero y, sin conexión, la última respuesta.
+const isData = (url) =>
+  (url.hostname.endsWith('.arcgis.com') && url.pathname.includes('/FeatureServer/')) ||
+  url.hostname === 'servais.enaire.es' ||
+  url.hostname === 'api.open-meteo.com' ||
+  url.hostname === 'services.swpc.noaa.gov';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -54,7 +67,7 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin === self.location.origin || url.hostname === 'unpkg.com') {
     event.respondWith(networkFirst(request, SHELL_CACHE));
-  } else if (url.hostname.endsWith('.arcgis.com') && url.pathname.includes('/FeatureServer/')) {
+  } else if (isData(url)) {
     event.respondWith(networkFirst(request, DATA_CACHE));
   } else if (TILE_HOSTS.test(url.hostname)) {
     event.respondWith(cacheFirst(request, TILE_CACHE));

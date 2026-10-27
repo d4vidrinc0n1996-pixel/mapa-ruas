@@ -70,6 +70,9 @@ export default {
       source: arcgis(50),
       category: 'limited',
       maxAltitudeM: 61,
+      // 61 m sobre la elevación de referencia del aeródromo: con la elevación del terreno
+      // se obtiene la altura real disponible en cada punto.
+      ceilingAmslM: (p) => (p['ELEVACIÓN_DE_REFERENCIA__m_'] != null ? Math.round(p['ELEVACIÓN_DE_REFERENCIA__m_'] + 61) : null),
       group: (p) => p.DESIGNADOR_OACI,
       name: (p) => `${p.NOMBRE_DEL_AD} (${p.DESIGNADOR_OACI})`,
       subtitle: (p) => [p.CIUDAD, p['TIPO_DE_OPERACIÓN'], p.FRECUENCIA__VHF_].filter(Boolean).join(' · '),

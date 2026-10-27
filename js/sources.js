@@ -1,9 +1,12 @@
 // Carga de capas de zonas y conversión a "features" internos.
 //
 // Una capa (definida en el módulo de cada país) describe:
-//   source:   { type: 'arcgis' | 'geojson', url: string | string[], simplify? }
-//   category: 'prohibited' | 'restricted' | 'limited' | 'caution' | 'info'  (o función de las propiedades)
-//   name, subtitle, details, group, maxAltitudeM, radiusM: valor o función (props) => valor
+//   source:   { type: 'arcgis' | 'geojson', url: string | string[], simplify?,
+//               tiled?: { tileDeg, minZoom, maxTiles? } }  -> carga por zona visible
+//   category: 'prohibited' | 'restricted' | 'limited' | 'caution' | 'info'  (o función de las propiedades;
+//             null descarta el elemento)
+//   name, subtitle, details, group, maxAltitudeM, ceilingAmslM, radiusM: valor o función (props) => valor
+//   ceilingAmslM: techo absoluto (m sobre el nivel del mar); con la elevación del terreno da la altura máxima real.
 
 import { ringsBBox } from './geo.js';
 
@@ -13,10 +16,11 @@ export const CATEGORIES = ['prohibited', 'restricted', 'limited', 'caution'];
 // círculos con miles de vértices y pesan decenas de MB sin simplificar.
 const DEFAULT_SIMPLIFY = 0.00003;
 
-export async function fetchSource(source, { signal } = {}) {
+// bbox: [sur, oeste, norte, este] para pedir sólo una parte de la capa.
+export async function fetchSource(source, { signal, bbox } = {}) {
   const urls = [].concat(source.url);
   const parts = await Promise.all(
-    urls.map((url) => (source.type === 'arcgis' ? fetchArcgis(url, source, signal) : fetchJson(url, signal))),
+    urls.map((url) => (source.type === 'arcgis' ? fetchArcgis(url, source, signal, bbox) : fetchJson(url, signal))),
   );
   // _src distingue features de distintas URLs que comparten OBJECTID.
   return {
@@ -31,8 +35,29 @@ async function fetchJson(url, signal) {
   return res.json();
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const isThrottled = (err) => /429|too many requests/i.test(`${err?.code ?? ''} ${err?.message ?? ''}`);
+
+// Algunos servicios oficiales (p. ej. la FAA) comparten una cuota por minuto entre todos
+// sus usuarios: ante un rechazo por saturación se reintenta con espera creciente.
+async function fetchArcgisPage(url, signal, attempts = 5) {
+  for (let attempt = 1; ; attempt++) {
+    let page;
+    try {
+      page = await fetchJson(url, signal);
+    } catch (err) {
+      if (attempt >= attempts || !isThrottled(err)) throw err;
+      await sleep(1500 * attempt + Math.random() * 1000);
+      continue;
+    }
+    if (!page.error) return page;
+    if (attempt >= attempts || !isThrottled(page.error)) throw new Error(page.error.message ?? 'Error del servicio ArcGIS');
+    await sleep(1500 * attempt + Math.random() * 1000);
+  }
+}
+
 // Consulta paginada a un FeatureServer de ArcGIS, devolviendo GeoJSON en WGS84.
-async function fetchArcgis(layerUrl, source, signal) {
+async function fetchArcgis(layerUrl, source, signal, bbox) {
   const pageSize = source.pageSize ?? 2000;
   const features = [];
   for (let offset = 0; ; offset += pageSize) {
@@ -47,8 +72,14 @@ async function fetchArcgis(layerUrl, source, signal) {
       resultOffset: String(offset),
       resultRecordCount: String(pageSize),
     });
-    const page = await fetchJson(`${layerUrl}/query?${params}`, signal);
-    if (page.error) throw new Error(page.error.message ?? 'Error del servicio ArcGIS');
+    if (bbox) {
+      const [s, w, n, e] = bbox;
+      params.set('geometry', `${w},${s},${e},${n}`);
+      params.set('geometryType', 'esriGeometryEnvelope');
+      params.set('inSR', '4326');
+      params.set('spatialRel', 'esriSpatialRelIntersects');
+    }
+    const page = await fetchArcgisPage(`${layerUrl}/query?${params}`, signal);
     const batch = page.features ?? [];
     features.push(...batch);
     if (!page.properties?.exceededTransferLimit || batch.length === 0) break;
@@ -65,16 +96,19 @@ export function geojsonToFeatures(collection, layer) {
     if (!geometry) return;
     const props = f.properties ?? {};
     const pick = (v) => (typeof v === 'function' ? v(props) : v);
+    const category = pick(layer.category);
+    if (!category) return;
     const base = {
       id: `${layer.id}:${f._src ?? 0}:${f.id ?? i}`,
       layer,
       props,
-      category: pick(layer.category),
+      category,
       name: clean(pick(layer.name)) || layer.label,
       subtitle: clean(pick(layer.subtitle)),
       details: clean(pick(layer.details)) || layer.note || '',
       group: clean(pick(layer.group)) || null,
       maxAltitudeM: pick(layer.maxAltitudeM) ?? null,
+      ceilingAmslM: pick(layer.ceilingAmslM) ?? null,
     };
     if (geometry.type === 'Point') {
       const center = [geometry.coordinates[1], geometry.coordinates[0]];
@@ -91,6 +125,59 @@ export function geojsonToFeatures(collection, layer) {
   });
   return out;
 }
+
+// Los mensajes oficiales traen HTML: se convierte a texto plano (nunca se inserta como HTML).
+export function htmlToText(html) {
+  if (!html) return '';
+  const withBreaks = String(html).replace(/<\/p>|<br\s*\/?>/gi, '\n');
+  const text = new DOMParser().parseFromString(withBreaks, 'text/html').body.textContent ?? '';
+  return text.replace(/[ \t]+/g, ' ').replace(/\n\s*/g, '\n').trim();
+}
+
+// ---------- ED-269 (estándar europeo de zonas geográficas UAS) ----------
+
+const ED269_TYPE = { PROHIBITED: 'prohibited', REQ_AUTHORIZATION: 'restricted', CONDITIONAL: 'caution' };
+const ED269_TYPE_LABEL = { PROHIBITED: 'Prohibida', REQ_AUTHORIZATION: 'Requiere autorización', CONDITIONAL: 'Condicionada' };
+const ED269_REASON = {
+  AIR_TRAFFIC: 'Tráfico aéreo',
+  SENSITIVE: 'Zona sensible',
+  PRIVACY: 'Privacidad',
+  POPULATION: 'Población',
+  NATURE: 'Naturaleza',
+  NOISE: 'Ruido',
+  FOREIGN_TERRITORY: 'Territorio extranjero',
+  EMERGENCY: 'Emergencia',
+  OTHER: 'Otros',
+};
+
+const toMeters = (value, uom) => (String(uom).toUpperCase() === 'FT' ? value * 0.3048 : value);
+const lowerM = (p) => toMeters(Number(p.lower) || 0, p.uom);
+
+// Si la zona empieza por encima del suelo, por debajo de su límite inferior se puede volar.
+function ed269Category(p) {
+  const category = ED269_TYPE[p.type];
+  if (!category) return null;
+  return category !== 'caution' && lowerM(p) > 0 ? 'limited' : category;
+}
+
+export const ED269 = {
+  category: ed269Category,
+  maxAltitudeM: (p) => (ed269Category(p) === 'limited' && p.lowerReference !== 'AMSL' ? Math.round(lowerM(p)) : null),
+  ceilingAmslM: (p) => (ed269Category(p) === 'limited' && p.lowerReference === 'AMSL' ? Math.round(lowerM(p)) : null),
+  name: (p) => p.name,
+  subtitle: (p) => {
+    const unit = String(p.uom).toUpperCase() === 'FT' ? 'ft' : 'm';
+    const reasons = String(p.reasons ?? '')
+      .split(',')
+      .map((r) => ED269_REASON[r.trim()])
+      .filter(Boolean)
+      .join(', ');
+    return [ED269_TYPE_LABEL[p.type], reasons, `${p.lower ?? 0}–${p.upper} ${unit} ${p.upperReference ?? ''}`.trim()]
+      .filter(Boolean)
+      .join(' · ');
+  },
+  details: (p) => htmlToText(p.message),
+};
 
 // Zonas que el usuario importa desde un archivo GeoJSON propio.
 export const CUSTOM_LAYER = {

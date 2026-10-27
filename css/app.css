@@ -224,6 +224,12 @@ select {
   box-shadow: var(--shadow);
 }
 
+.busy.hint {
+  top: calc(var(--safe-top) + var(--topbar-h) + var(--gutter) + 48px);
+  max-width: calc(100% - 2 * var(--gutter));
+  text-align: center;
+}
+
 .spinner {
   width: 14px;
   height: 14px;
@@ -308,6 +314,9 @@ select {
 }
 .status[data-level='prohibited'] .badge {
   background: var(--prohibited);
+}
+.status[data-level='unknown'] .badge {
+  background: #475569;
 }
 
 .status-text {
@@ -412,37 +421,80 @@ select {
   box-shadow: 0 0 0 1px var(--c);
 }
 
-.gps-panel h3 {
-  margin: 8px 0 6px;
+.gps-panel h3,
+.conditions h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 6px;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
 }
 
-.gps-panel dl {
+.grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 8px;
   margin: 0 0 10px;
 }
 
-.gps-panel dl div {
+.grid div {
   padding: 8px;
   border-radius: 10px;
   background: var(--surface-2);
 }
 
-.gps-panel dt {
+.grid dt {
   font-size: 11.5px;
   color: var(--muted);
 }
 
-.gps-panel dd {
+.grid dd {
   margin: 0;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.verdict small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.badge.small {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 15px;
+}
+
+.verdict[data-level='good'] .badge {
+  background: var(--ok);
+}
+.verdict[data-level='caution'] .badge {
+  background: var(--limited);
+  color: #1f2937;
+}
+.verdict[data-level='bad'] .badge {
+  background: var(--prohibited);
+}
+
+.spinner.inline {
+  width: 12px;
+  height: 12px;
 }
 
 .rules-line {
@@ -509,39 +561,75 @@ select {
   cursor: pointer;
 }
 
-.segmented {
+.chips {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--surface-2);
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.segmented label {
-  flex: 1;
-}
-
-.segmented input {
+.chip input {
   position: absolute;
   opacity: 0;
 }
 
-.segmented span {
+.chip span {
   display: block;
-  padding: 8px;
-  text-align: center;
-  border-radius: 9px;
+  padding: 7px 11px;
+  font-size: 13.5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   cursor: pointer;
 }
 
-.segmented input:checked + span {
-  background: var(--surface);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+.chip.locked span {
+  color: var(--muted);
 }
 
-.segmented input:focus-visible + span {
+.chip input:checked + span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chip input:focus-visible + span {
   outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.keys {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.keys summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.field {
+  display: block;
+  margin: 10px 0;
+}
+
+.field span {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.field small {
+  font-weight: 400;
+}
+
+.field input {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
 }
 
 .layer-list {

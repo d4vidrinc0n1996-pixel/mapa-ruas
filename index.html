@@ -29,7 +29,8 @@
     </header>
     <ul id="search-results" class="search-results" hidden></ul>
 
-    <div id="busy" class="busy" hidden><span class="spinner"></span>Cargando capas oficiales…</div>
+    <div id="busy" class="busy" hidden><span class="spinner"></span>Cargando zonas oficiales…</div>
+    <div id="zoom-hint" class="busy hint" hidden></div>
 
     <div class="fab-stack">
       <button id="btn-layers" class="fab" type="button" aria-label="Capas" title="Capas">
@@ -48,6 +49,7 @@
       <div id="status" class="status" data-level="idle" role="button" tabindex="0"></div>
       <div class="sheet-body">
         <div id="hits"></div>
+        <div id="conditions" class="conditions" hidden></div>
         <div id="gps" class="gps-panel" hidden></div>
         <p class="rules-line" id="rules-line"></p>
       </div>
@@ -59,7 +61,18 @@
         <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
       </header>
       <h3>Mapa base</h3>
-      <div id="base-layers" class="segmented"></div>
+      <div id="base-layers" class="chips"></div>
+      <details class="keys">
+        <summary>Claves de API (Mapbox, MapTiler, Google)</summary>
+        <form id="keys-form" autocomplete="off">
+          <div id="keys-fields"></div>
+          <p class="muted small">
+            Se guardan solo en este dispositivo. Restringe cada clave a tu dominio
+            (<code>d4vidrinc0n1996-pixel.github.io</code>) en el panel del proveedor.
+          </p>
+          <button class="btn small" type="submit">Guardar claves</button>
+        </form>
+      </details>
       <h3>Zonas</h3>
       <div id="layer-list" class="layer-list"></div>
       <h3>Zonas propias</h3>
