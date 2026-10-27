@@ -896,7 +896,8 @@ if (window.matchMedia('(display-mode: standalone)').matches || !/iPhone|iPad/.te
 }
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // updateViaCache: 'none' hace que el navegador busque siempre la última versión de sw.js.
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 }
 
 // ---------- Inicio ----------

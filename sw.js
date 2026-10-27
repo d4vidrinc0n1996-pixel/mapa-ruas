@@ -1,8 +1,8 @@
 // Service worker: app instalable y uso sin conexión con los últimos datos descargados.
 
-const SHELL_CACHE = 'mapa-ruas-shell-v4';
-const DATA_CACHE = 'mapa-ruas-data-v4';
-const TILE_CACHE = 'mapa-ruas-tiles-v4';
+const SHELL_CACHE = 'mapa-ruas-shell-v5';
+const DATA_CACHE = 'mapa-ruas-data-v5';
+const TILE_CACHE = 'mapa-ruas-tiles-v5';
 const MAX_TILES = 2000;
 
 const SHELL = [
@@ -69,7 +69,10 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
-  if (url.origin === self.location.origin || url.hostname === 'unpkg.com') {
+  if (url.origin === self.location.origin) {
+    // GitHub Pages permite cachear 10 min: se revalida para que las versiones nuevas lleguen ya.
+    event.respondWith(networkFirst(request, SHELL_CACHE, { cache: 'no-cache' }));
+  } else if (url.hostname === 'unpkg.com') {
     event.respondWith(networkFirst(request, SHELL_CACHE));
   } else if (isData(url)) {
     event.respondWith(networkFirst(request, DATA_CACHE));
@@ -78,10 +81,10 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-async function networkFirst(request, cacheName) {
+async function networkFirst(request, cacheName, init) {
   const cache = await caches.open(cacheName);
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, init);
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch (err) {
