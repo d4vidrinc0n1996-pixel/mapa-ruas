@@ -2,6 +2,8 @@
 //
 // Una capa (definida en el módulo de cada país) describe:
 //   source:   { type: 'arcgis' | 'geojson', url: string | string[], simplify?,
+//               where?, outFields?, orderBy?, pageSize?,
+//               format?: 'esrijson'  -> algunos servidores sólo simplifican en su formato propio
 //               tiled?: { tileDeg, minZoom, maxTiles? } }  -> carga por zona visible
 //   category: 'prohibited' | 'restricted' | 'limited' | 'caution' | 'info'  (o función de las propiedades;
 //             null descarta el elemento)
@@ -56,19 +58,31 @@ async function fetchArcgisPage(url, signal, attempts = 5) {
   }
 }
 
-// Consulta paginada a un FeatureServer de ArcGIS, devolviendo GeoJSON en WGS84.
+// Feature en formato JSON de Esri -> GeoJSON. Los anillos van todos juntos: la
+// evaluación usa la regla par-impar, así que no hace falta separar polígonos.
+function esriToGeojson(feature) {
+  const g = feature.geometry;
+  const props = feature.attributes ?? {};
+  let geometry = null;
+  if (g?.rings) geometry = { type: 'Polygon', coordinates: g.rings };
+  else if (g && 'x' in g) geometry = { type: 'Point', coordinates: [g.x, g.y] };
+  return { type: 'Feature', id: props.OBJECTID ?? props.objectid, properties: props, geometry };
+}
+
+// Consulta paginada a un servicio de ArcGIS, devolviendo GeoJSON en WGS84.
 async function fetchArcgis(layerUrl, source, signal, bbox) {
   const pageSize = source.pageSize ?? 2000;
+  const esri = source.format === 'esrijson';
   const features = [];
   for (let offset = 0; ; offset += pageSize) {
     const params = new URLSearchParams({
-      where: '1=1',
-      outFields: '*',
+      where: source.where ?? '1=1',
+      outFields: source.outFields ?? '*',
       outSR: '4326',
-      f: 'geojson',
+      f: esri ? 'json' : 'geojson',
       geometryPrecision: '6',
       maxAllowableOffset: String(source.simplify ?? DEFAULT_SIMPLIFY),
-      orderByFields: 'OBJECTID',
+      orderByFields: source.orderBy ?? 'OBJECTID',
       resultOffset: String(offset),
       resultRecordCount: String(pageSize),
     });
@@ -80,9 +94,10 @@ async function fetchArcgis(layerUrl, source, signal, bbox) {
       params.set('spatialRel', 'esriSpatialRelIntersects');
     }
     const page = await fetchArcgisPage(`${layerUrl}/query?${params}`, signal);
-    const batch = page.features ?? [];
+    const batch = esri ? (page.features ?? []).map(esriToGeojson) : (page.features ?? []);
     features.push(...batch);
-    if (!page.properties?.exceededTransferLimit || batch.length === 0) break;
+    const more = esri ? page.exceededTransferLimit : page.properties?.exceededTransferLimit;
+    if (!more || batch.length === 0) break;
   }
   return { features };
 }

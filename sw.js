@@ -1,8 +1,8 @@
 // Service worker: app instalable y uso sin conexión con los últimos datos descargados.
 
-const SHELL_CACHE = 'mapa-ruas-shell-v2';
-const DATA_CACHE = 'mapa-ruas-data-v2';
-const TILE_CACHE = 'mapa-ruas-tiles-v2';
+const SHELL_CACHE = 'mapa-ruas-shell-v3';
+const DATA_CACHE = 'mapa-ruas-data-v3';
+const TILE_CACHE = 'mapa-ruas-tiles-v3';
 const MAX_TILES = 2000;
 
 const SHELL = [
@@ -14,6 +14,7 @@ const SHELL = [
   'js/conditions.js',
   'js/geo.js',
   'js/gps.js',
+  'js/pois.js',
   'js/render.js',
   'js/sources.js',
   'js/storage.js',
@@ -22,6 +23,8 @@ const SHELL = [
   'js/countries/co.js',
   'js/countries/es.js',
   'js/countries/us.js',
+  'data/co/sitios.geojson',
+  'data/co/miradores-osm.geojson',
   'manifest.webmanifest',
   'icons/icon.svg',
   'icons/icon-192.png',
@@ -38,6 +41,7 @@ const TILE_HOSTS = /(^|\.)tile\.openstreetmap\.org$|^server\.arcgisonline\.com$|
 const isData = (url) =>
   (url.hostname.endsWith('.arcgis.com') && url.pathname.includes('/FeatureServer/')) ||
   url.hostname === 'servais.enaire.es' ||
+  url.hostname === 'mapas.parquesnacionales.gov.co' ||
   url.hostname === 'api.open-meteo.com' ||
   url.hostname === 'services.swpc.noaa.gov';
 

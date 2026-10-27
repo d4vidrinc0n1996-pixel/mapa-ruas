@@ -50,7 +50,7 @@ export class ZoneRenderer {
       opacity: 0.9,
       fillColor: color,
       // Opacidad baja: en ciudades se superponen muchas zonas y no deben tapar el mapa base.
-      fillOpacity: f.category === 'limited' ? 0.08 : 0.12,
+      fillOpacity: f.category === 'limited' || f.category === 'caution' ? 0.08 : 0.12,
     };
     if (f.kind === 'point') {
       return L.circleMarker(f.center, { ...style, radius: 4, weight: 1.5, color: '#fff', fillOpacity: 1 });

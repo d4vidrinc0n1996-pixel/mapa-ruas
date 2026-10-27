@@ -73,6 +73,15 @@
           <button class="btn small" type="submit">Guardar claves</button>
         </form>
       </details>
+      <h3>Sitios de interés</h3>
+      <div id="poi-list" class="layer-list"></div>
+      <label class="layer-row">
+        <input type="checkbox" id="hide-blocked" />
+        <span>
+          <strong>Ocultar sitios donde no se puede volar</strong>
+          <small>Prohibidos o que requieren autorización</small>
+        </span>
+      </label>
       <h3>Zonas</h3>
       <div id="layer-list" class="layer-list"></div>
       <h3>Zonas propias</h3>
@@ -104,6 +113,10 @@
           <li><span class="swatch" style="--c: var(--limited)"></span>Altura limitada</li>
           <li><span class="swatch dot" style="--c: var(--info)"></span>Punto de referencia (aeropuerto / helipuerto)</li>
         </ul>
+        <p class="small muted">
+          Los sitios de interés (⛰️ 💦 🏖️…) llevan un borde con el color del estado de vuelo de ese punto; gris
+          mientras se cargan las zonas.
+        </p>
       </div>
       <p class="disclaimer">
         Mapa RUAS es una herramienta informativa basada en datos públicos de la autoridad aeronáutica. Puede haber

@@ -5,6 +5,7 @@ import { GpsTracker } from './gps.js';
 import { CUSTOM_LAYER, geojsonToFeatures } from './sources.js';
 import { BASEMAPS, PROVIDERS, createBaseLayers, getKeys, saveKeys } from './basemaps.js';
 import { fetchWeather, fetchElevation, fetchKp, assess, describeWeather, kpLabel } from './conditions.js';
+import { PoiLayer, POI_TYPES, poiName } from './pois.js';
 import { storage } from './storage.js';
 import { haversine, formatDistance, formatCoord } from './geo.js';
 
@@ -73,10 +74,15 @@ const state = {
   gps: null, // última posición
   following: false,
   picked: null, // [lat, lon] tocado en el mapa
+  poi: null, // propiedades del sitio de interés seleccionado
   base: storage.get('baseLayer') ?? 'claro',
   keys: getKeys(),
   hidden: new Set(storage.getJSON('hiddenLayers') ?? []),
+  hiddenPois: new Set(storage.getJSON('hiddenPois') ?? []),
+  hideBlockedPois: storage.get('hideBlockedPois') === '1',
 };
+
+let poiLayers = [];
 
 // Condiciones del punto consultado; se reutilizan mientras el punto no se aleje.
 const cond = {
@@ -96,6 +102,8 @@ const map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([4.
 L.control.zoom({ position: 'topright' }).addTo(map);
 L.control.scale({ imperial: false, position: 'topleft' }).addTo(map);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+// Los sitios de interés van por encima de todas las zonas.
+map.createPane('pois').style.zIndex = '450';
 
 let baseLayers = [];
 async function setBaseLayer(id) {
@@ -176,12 +184,14 @@ async function switchCountry(code) {
     if (zones !== state.zones) return;
     renderer.sync(zones.features);
     renderStatus();
+    schedulePoiStatus();
   });
   zones.addEventListener('status', () => {
     if (zones !== state.zones) return;
     $('#busy').hidden = !zones.loading;
     renderLayersPanel();
     renderStatus();
+    schedulePoiStatus();
   });
   zones.addEventListener('retry', () => {
     loadVisible();
@@ -191,6 +201,21 @@ async function switchCountry(code) {
 
   const custom = storage.getJSON(`custom:${country.code}`);
   if (custom) zones.setCustom(geojsonToFeatures(custom, CUSTOM_LAYER));
+
+  poiLayers.forEach((p) => p.destroy());
+  poiLayers = (country.pois ?? []).map((def) => {
+    const layer = new PoiLayer(map, def, { onSelect: selectPoi });
+    layer.visible = !state.hiddenPois.has(def.id);
+    layer.hideBlocked = state.hideBlockedPois;
+    layer
+      .load()
+      .then(() => {
+        schedulePoiStatus();
+        renderLayersPanel();
+      })
+      .catch(() => toast(`No se pudieron cargar: ${def.label}`));
+    return layer;
+  });
 
   renderInfoPanel();
   renderLayersPanel();
@@ -219,8 +244,31 @@ function subjectChanged() {
   renderStatus();
 }
 
-function pickPoint(point) {
+// Nunca se da luz verde si faltan capas o el punto no se ha podido evaluar del todo.
+function displayLevel(r, zones) {
+  const incomplete = !r.outside && (!r.complete || zones.loading || zones.failed);
+  return r.level === 'ok' && incomplete ? 'unknown' : r.level;
+}
+
+// Recalcular el estado de miles de sitios es costoso: se agrupan los cambios de zonas.
+const schedulePoiStatus = debounce(() => {
+  const zones = state.zones;
+  if (!zones) return;
+  const evaluate = (point) => {
+    const r = zones.evaluate(point);
+    return r.outside ? 'unknown' : displayLevel(r, zones);
+  };
+  poiLayers.forEach((layer) => layer.setStatus(evaluate));
+}, 400);
+
+function selectPoi(item, def) {
+  closePanels();
+  pickPoint(item.point, { ...item.props, source: def.label });
+}
+
+function pickPoint(point, poi = null) {
   state.picked = point;
+  state.poi = poi;
   state.following = false;
   pickMarker.setLatLng(point).addTo(map);
   $('#sheet').classList.add('open');
@@ -230,6 +278,7 @@ function pickPoint(point) {
 
 function clearPicked() {
   state.picked = null;
+  state.poi = null;
   pickMarker.remove();
   subjectChanged();
 }
@@ -258,11 +307,12 @@ function renderStatus() {
 
   const terrainM = terrainAt(s.point);
   const r = zones.evaluate(s.point, { terrainM });
-  const incomplete = !r.outside && (!r.complete || zones.loading || zones.failed);
-  const levelKey = r.level === 'ok' && incomplete ? 'unknown' : r.level;
+  const levelKey = displayLevel(r, zones);
   const level = LEVELS[levelKey];
   const where =
-    s.kind === 'gps' ? `Tu ubicación · precisión ±${Math.round(state.gps.accuracy)} m` : `Punto seleccionado · ${formatCoord(...s.point)}`;
+    s.kind === 'gps'
+      ? `Tu ubicación · precisión ±${Math.round(state.gps.accuracy)} m`
+      : `${state.poi ? 'Sitio de interés' : 'Punto seleccionado'} · ${formatCoord(...s.point)}`;
   card.dataset.level = levelKey;
   card.innerHTML = `
     <div class="badge">${level.icon}</div>
@@ -295,6 +345,7 @@ function renderStatus() {
   // conservan abiertas las observaciones que el usuario esté leyendo.
   const hitsEl = $('#hits');
   const html = `
+    ${s.kind === 'picked' && state.poi ? poiHtml(state.poi) : ''}
     <p class="level-text">${esc(level.text(r, c))}</p>
     ${notes.join('')}
     ${r.hits.length ? `<ul class="hit-list">${r.hits.map(hitHtml).join('')}</ul>` : ''}`;
@@ -306,6 +357,23 @@ function renderStatus() {
   }
   renderConditions();
   renderGps();
+}
+
+function poiHtml(poi) {
+  const type = POI_TYPES[poi.type];
+  const meta = [type?.label, poi.department, poi.ele != null ? `${poi.ele.toLocaleString('es')} m s.n.m.` : null, poi.source];
+  const [osmType, osmId] = (poi.osm ?? '').split('/');
+  return `
+    <div class="poi-card">
+      <span class="poi-emoji">${type?.emoji ?? '📍'}</span>
+      <div>
+        <strong>${esc(poiName(poi))}</strong>
+        <small>${esc(meta.filter(Boolean).join(' · '))}</small>
+        ${poi.description ? `<p>${esc(poi.description)}</p>` : ''}
+        ${poi.tip ? `<p class="tip">💡 ${esc(poi.tip)}</p>` : ''}
+        ${osmId ? `<a class="small" href="https://www.openstreetmap.org/${esc(osmType)}/${esc(osmId)}" target="_blank" rel="noopener">Ver en OpenStreetMap</a>` : ''}
+      </div>
+    </div>`;
 }
 
 function hitHtml(h) {
@@ -635,6 +703,20 @@ function renderLayersPanel() {
     })
     .join('');
 
+  $('#poi-list').innerHTML = poiLayers.length
+    ? poiLayers
+        .map(
+          ({ def, items }) => `
+        <label class="layer-row">
+          <input type="checkbox" data-poi="${def.id}" ${state.hiddenPois.has(def.id) ? '' : 'checked'}>
+          <span class="poi-swatch">${def.style === 'dot' ? '●' : '★'}</span>
+          <span><strong>${esc(def.label)}</strong><small>${esc(def.legend ?? '')} · ${items.length} sitios</small></span>
+        </label>`,
+        )
+        .join('')
+    : '<p class="muted small">Aún no hay sitios para este país.</p>';
+  $('#hide-blocked').checked = state.hideBlockedPois;
+
   $('#clear-custom').hidden = !zones?.status.get('custom')?.count;
   const updated = zones?.loadedAt ? ` · actualizado ${zones.loadedAt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}` : '';
   $('#data-source').innerHTML = c.dataSource
@@ -672,6 +754,26 @@ $('#layer-list').addEventListener('change', (e) => {
   storage.setJSON('hiddenLayers', [...state.hidden]);
   renderer.setVisible(id, e.target.checked);
   loadVisible();
+});
+
+$('#poi-list').addEventListener('change', (e) => {
+  const id = e.target.dataset.poi;
+  const layer = poiLayers.find((p) => p.def.id === id);
+  if (!layer) return;
+  if (e.target.checked) state.hiddenPois.delete(id);
+  else state.hiddenPois.add(id);
+  storage.setJSON('hiddenPois', [...state.hiddenPois]);
+  layer.visible = e.target.checked;
+  layer.refresh();
+});
+
+$('#hide-blocked').addEventListener('change', (e) => {
+  state.hideBlockedPois = e.target.checked;
+  storage.set('hideBlockedPois', e.target.checked ? '1' : '0');
+  for (const layer of poiLayers) {
+    layer.hideBlocked = e.target.checked;
+    layer.refresh();
+  }
 });
 
 $('#layer-list').addEventListener('click', (e) => {

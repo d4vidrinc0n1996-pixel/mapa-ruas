@@ -1,0 +1,776 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Piedra del Peñol",
+    "type": "montaña",
+    "department": "Antioquia",
+    "description": "Monolito de 220 m sobre el embalse Peñol-Guatapé y sus islas.",
+    "tip": "Al amanecer el embalse suele estar en calma y sin bruma."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.17943,
+     6.22002
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Embalse Peñol-Guatapé",
+    "type": "agua",
+    "department": "Antioquia",
+    "description": "Laberinto de islas y penínsulas verdes sobre aguas azul oscuro."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.17997,
+     6.28559
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Pueblo de Guatapé",
+    "type": "pueblo",
+    "department": "Antioquia",
+    "description": "Pueblo de zócalos de colores a orillas del embalse.",
+    "tip": "Casco urbano: no sobrevueles personas."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.16175,
+     6.23422
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Valle de Cocora",
+    "type": "montaña",
+    "department": "Quindío",
+    "description": "Bosque de palmas de cera, el árbol nacional, en valles de niebla.",
+    "tip": "Llega temprano: hacia el mediodía la niebla suele cubrir el valle."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.48705,
+     4.63794
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Salento",
+    "type": "pueblo",
+    "department": "Quindío",
+    "description": "Pueblo cafetero con mirador sobre el valle del río Quindío."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.5698,
+     4.6373
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Desierto de la Tatacoa",
+    "type": "desierto",
+    "department": "Huila",
+    "description": "Bosque seco con cárcavas rojas y grises; cielos muy limpios.",
+    "tip": "Mucho calor al mediodía: cuida las baterías."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.14677,
+     3.25361
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Caño Cristales",
+    "type": "cascada",
+    "department": "Meta",
+    "description": "El «río de los cinco colores» por sus plantas acuáticas.",
+    "tip": "Dentro de un Parque Nacional: requiere autorización."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.79239,
+     2.26175
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cabo de la Vela",
+    "type": "playa",
+    "department": "La Guajira",
+    "description": "Desierto que cae al Caribe; incluye el Pilón de Azúcar.",
+    "tip": "Viento fuerte y constante: revisa las ráfagas."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -72.1537,
+     12.20582
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Punta Gallinas",
+    "type": "playa",
+    "department": "La Guajira",
+    "description": "Extremo norte de Sudamérica, con dunas que llegan al mar."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -71.66471,
+     12.45858
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cabo San Juan (Tayrona)",
+    "type": "playa",
+    "department": "Magdalena",
+    "description": "Playas entre rocas y selva al pie de la Sierra Nevada.",
+    "tip": "Parque Nacional: requiere autorización."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.97446,
+     11.33805
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Minca",
+    "type": "montaña",
+    "department": "Magdalena",
+    "description": "Montañas cafeteras con vista a Santa Marta y el mar."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.11693,
+     11.14276
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Palomino",
+    "type": "playa",
+    "department": "La Guajira",
+    "description": "Desembocadura del río Palomino entre palmeras y mar abierto."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.55981,
+     11.24489
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Laguna de Guatavita",
+    "type": "agua",
+    "department": "Cundinamarca",
+    "description": "Laguna circular de la leyenda de El Dorado.",
+    "tip": "Sitio sagrado muisca: consulta las reglas del lugar."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.77529,
+     4.97774
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Embalse de Tominé",
+    "type": "agua",
+    "department": "Cundinamarca",
+    "description": "Gran embalse entre Guatavita y Sesquilé."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.82654,
+     4.97772
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Salto del Tequendama",
+    "type": "cascada",
+    "department": "Cundinamarca",
+    "description": "Caída de 157 m del río Bogotá frente a la Casa Museo."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.2966,
+     4.57615
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cascada La Chorrera",
+    "type": "cascada",
+    "department": "Cundinamarca",
+    "description": "La cascada más alta de Colombia, en bosque altoandino."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.95977,
+     4.59729
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cañón del Chicamocha",
+    "type": "cañón",
+    "department": "Santander",
+    "description": "Cañón de más de 2.000 m de profundidad.",
+    "tip": "Corrientes térmicas fuertes en la tarde."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.00357,
+     6.79066
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Barichara",
+    "type": "pueblo",
+    "department": "Santander",
+    "description": "Pueblo colonial de piedra sobre el cañón del río Suárez."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.2229,
+     6.63478
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Villa de Leyva",
+    "type": "pueblo",
+    "department": "Boyacá",
+    "description": "Una de las plazas coloniales más grandes de América.",
+    "tip": "Casco urbano: no sobrevueles personas."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.52397,
+     5.63382
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Desierto de la Candelaria",
+    "type": "desierto",
+    "department": "Boyacá",
+    "description": "Paisaje semiárido junto al monasterio de La Candelaria."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.60475,
+     5.51929
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Lago de Tota",
+    "type": "agua",
+    "department": "Boyacá",
+    "description": "El lago más grande de Colombia, con playa de arena blanca.",
+    "tip": "A 3.000 m: menos sustentación y más viento."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -72.9137,
+     5.54253
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Páramo de Ocetá",
+    "type": "montaña",
+    "department": "Boyacá",
+    "description": "Páramo de frailejones y formaciones rocosas."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -72.8178,
+     5.70404
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Mompox",
+    "type": "patrimonio",
+    "department": "Bolívar",
+    "description": "Ciudad colonial a orillas del río Magdalena."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.42515,
+     9.24149
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Playa Blanca (Barú)",
+    "type": "playa",
+    "department": "Bolívar",
+    "description": "Arena blanca y mar turquesa en la península de Barú.",
+    "tip": "Muy concurrida: vuela temprano."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.60779,
+     10.22431
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Islas del Rosario",
+    "type": "isla",
+    "department": "Bolívar",
+    "description": "Archipiélago coralino frente a Cartagena.",
+    "tip": "Parque Nacional: requiere autorización."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.74632,
+     10.18064
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Islas de San Bernardo",
+    "type": "isla",
+    "department": "Sucre",
+    "description": "Islas de manglar y arrecife en el golfo de Morrosquillo."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.8364,
+     9.79642
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Johnny Cay",
+    "type": "isla",
+    "department": "San Andrés",
+    "description": "Cayo de arena blanca frente a San Andrés.",
+    "tip": "Cerca del aeropuerto: revisa el estado."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -81.68967,
+     12.60007
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Providencia",
+    "type": "isla",
+    "department": "San Andrés",
+    "description": "Isla volcánica con el mar de los siete colores."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -81.36985,
+     13.38285
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Nevado del Ruiz",
+    "type": "montaña",
+    "department": "Caldas",
+    "description": "Volcán nevado activo de 5.300 m.",
+    "tip": "Parque Nacional y gran altitud: requiere autorización."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.31782,
+     4.88194
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Termales de Santa Rosa de Cabal",
+    "type": "cascada",
+    "department": "Risaralda",
+    "description": "Cascadas y piscinas termales en la cordillera Central."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.54875,
+     4.83763
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cañón del Río Claro",
+    "type": "cañón",
+    "department": "Antioquia",
+    "description": "Cañón de mármol con aguas cristalinas."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.8549,
+     5.88967
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Jardín",
+    "type": "pueblo",
+    "department": "Antioquia",
+    "description": "Pueblo de balcones de colores rodeado de montañas cafeteras."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.81918,
+     5.59905
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Jericó",
+    "type": "pueblo",
+    "department": "Antioquia",
+    "description": "Pueblo patrimonio con vista al cañón del río Cauca."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.78621,
+     5.79146
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Puente de Occidente",
+    "type": "patrimonio",
+    "department": "Antioquia",
+    "description": "Puente colgante de 1895 sobre el río Cauca."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.79823,
+     6.57796
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Capurganá",
+    "type": "playa",
+    "department": "Chocó",
+    "description": "Selva y mar Caribe junto a la frontera con Panamá."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -77.34719,
+     8.6366
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Ensenada de Utría",
+    "type": "playa",
+    "department": "Chocó",
+    "description": "Ensenada del Pacífico donde llegan las ballenas jorobadas.",
+    "tip": "Parque Nacional: requiere autorización."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -77.34118,
+     5.99461
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Bahía Solano",
+    "type": "playa",
+    "department": "Chocó",
+    "description": "Selva que cae al Pacífico, con cascadas sobre la playa."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -77.40344,
+     6.22456
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cerros de Mavecure",
+    "type": "montaña",
+    "department": "Guainía",
+    "description": "Tres moles de roca de más de 700 m sobre el río Inírida."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -67.96964,
+     3.45745
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Puerto Nariño",
+    "type": "agua",
+    "department": "Amazonas",
+    "description": "Pueblo ribereño del Amazonas cerca de los lagos de Tarapoto."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -70.36398,
+     -3.77994
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Parque Arqueológico de San Agustín",
+    "type": "patrimonio",
+    "department": "Huila",
+    "description": "Estatuaria precolombina en las montañas del alto Magdalena.",
+    "tip": "Sitio arqueológico: consulta las reglas del ICANH."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -76.29536,
+     1.88333
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Estrecho del Magdalena",
+    "type": "cañón",
+    "department": "Huila",
+    "description": "El río Magdalena se encajona a solo 2,2 m de ancho."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -76.29794,
+     1.92787
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Laguna de la Cocha",
+    "type": "agua",
+    "department": "Nariño",
+    "description": "Gran laguna andina con la isla La Corota."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -77.15336,
+     1.07714
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Santuario de Las Lajas",
+    "type": "patrimonio",
+    "department": "Nariño",
+    "description": "Basílica neogótica construida sobre el cañón del río Guáitara.",
+    "tip": "Cerca del aeropuerto de Ipiales: revisa el estado."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -77.58601,
+     0.8056
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Lago Calima",
+    "type": "agua",
+    "department": "Valle del Cauca",
+    "description": "Embalse de montaña famoso por su viento constante.",
+    "tip": "Viento fuerte por las tardes."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -76.49548,
+     3.89249
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Cañón del Combeima (Juntas)",
+    "type": "cañón",
+    "department": "Tolima",
+    "description": "Valle que sube de Ibagué hacia el Nevado del Tolima."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -75.3214,
+     4.55603
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Embalse del Neusa",
+    "type": "agua",
+    "department": "Cundinamarca",
+    "description": "Embalse rodeado de bosque de pinos y páramo."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.95192,
+     5.16162
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Hoyo del Aire",
+    "type": "cañón",
+    "department": "Santander",
+    "description": "Sumidero natural de 180 m de profundidad."
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.57798,
+     6.13134
+    ]
+   }
+  }
+ ]
+}
