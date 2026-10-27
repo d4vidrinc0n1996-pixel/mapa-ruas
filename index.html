@@ -33,6 +33,9 @@
     <div id="zoom-hint" class="busy hint" hidden></div>
 
     <div class="fab-stack">
+      <button id="btn-nearby" class="fab" type="button" aria-label="Sitios cerca" title="Sitios cerca">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z" /><circle cx="12" cy="10" r="2.2" /></svg>
+      </button>
       <button id="btn-layers" class="fab" type="button" aria-label="Capas" title="Capas">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5-10-5Z" /><path d="m2 13 10 5 10-5" /><path d="m2 17.5 10 5 10-5" opacity=".5" /></svg>
       </button>
@@ -97,6 +100,19 @@
         <button id="clear-custom" class="btn ghost" type="button" hidden>Quitar importadas</button>
       </div>
       <p id="data-source" class="muted small"></p>
+    </aside>
+
+    <aside id="panel-nearby" class="panel" hidden aria-label="Sitios cerca">
+      <header class="panel-head">
+        <h2>Sitios cerca</h2>
+        <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+      </header>
+      <p id="nearby-origin" class="muted small"></p>
+      <label class="layer-row">
+        <input type="checkbox" id="nearby-flyable" />
+        <span><strong>Solo donde se puede volar</strong><small>Sin restricciones, precaución o altura limitada</small></span>
+      </label>
+      <ul id="nearby-list" class="nearby-list"></ul>
     </aside>
 
     <aside id="panel-info" class="panel" hidden aria-label="Normativa">

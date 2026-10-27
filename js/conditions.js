@@ -107,6 +107,19 @@ export async function fetchElevation([lat, lon]) {
   return j.elevation?.[0] ?? null;
 }
 
+// Elevación de varios puntos a la vez (la API admite hasta 100 por petición).
+export async function fetchElevations(points) {
+  const out = [];
+  for (let i = 0; i < points.length; i += 100) {
+    const batch = points.slice(i, i + 100);
+    const lat = batch.map(([la]) => la.toFixed(5)).join(',');
+    const lon = batch.map(([, lo]) => lo.toFixed(5)).join(',');
+    const j = await getJson(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+    out.push(...(j.elevation ?? []));
+  }
+  return out;
+}
+
 export async function fetchKp() {
   const [now, forecast] = await Promise.all([
     getJson('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'),

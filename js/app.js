@@ -4,8 +4,8 @@ import { ZoneRenderer, COLORS } from './render.js';
 import { GpsTracker } from './gps.js';
 import { CUSTOM_LAYER, geojsonToFeatures } from './sources.js';
 import { BASEMAPS, PROVIDERS, createBaseLayers, getKeys, saveKeys } from './basemaps.js';
-import { fetchWeather, fetchElevation, fetchKp, assess, describeWeather, kpLabel } from './conditions.js';
-import { PoiLayer, POI_TYPES, poiName } from './pois.js';
+import { fetchWeather, fetchElevation, fetchElevations, fetchKp, assess, describeWeather, kpLabel } from './conditions.js';
+import { PoiLayer, POI_TYPES, STATUS_COLORS, poiName } from './pois.js';
 import { storage } from './storage.js';
 import { haversine, formatDistance, formatCoord } from './geo.js';
 
@@ -80,6 +80,7 @@ const state = {
   hidden: new Set(storage.getJSON('hiddenLayers') ?? []),
   hiddenPois: new Set(storage.getJSON('hiddenPois') ?? []),
   hideBlockedPois: storage.get('hideBlockedPois') === '1',
+  nearbyFlyable: storage.get('nearbyFlyable') === '1',
 };
 
 let poiLayers = [];
@@ -250,16 +251,40 @@ function displayLevel(r, zones) {
   return r.level === 'ok' && incomplete ? 'unknown' : r.level;
 }
 
+// Estado de vuelo de un sitio. Si ya se conoce la elevación de su terreno se usa para
+// los techos absolutos (p. ej. 61 m sobre el aeropuerto), igual que en la ficha.
+function poiLevel(item) {
+  const zones = state.zones;
+  const r = zones.evaluate(item.point, { terrainM: item.terrainM ?? null });
+  if (!r.noHeadroom) item.needsTerrain = r.hits.some((h) => h.inside && h.feature.ceilingAmslM != null);
+  return r.outside ? 'unknown' : displayLevel(r, zones);
+}
+
 // Recalcular el estado de miles de sitios es costoso: se agrupan los cambios de zonas.
 const schedulePoiStatus = debounce(() => {
-  const zones = state.zones;
-  if (!zones) return;
-  const evaluate = (point) => {
-    const r = zones.evaluate(point);
-    return r.outside ? 'unknown' : displayLevel(r, zones);
-  };
-  poiLayers.forEach((layer) => layer.setStatus(evaluate));
+  if (!state.zones) return;
+  poiLayers.forEach((layer) => layer.setStatus(poiLevel));
+  renderNearby();
 }, 400);
+
+// Pide la elevación de los sitios listados que dependen de ella y los reevalúa.
+let terrainPending = false;
+async function refineNearbyTerrain(entries) {
+  const missing = entries.filter(({ item }) => item.needsTerrain && item.terrainM === undefined);
+  if (!missing.length || terrainPending) return;
+  terrainPending = true;
+  try {
+    const elevations = await fetchElevations(missing.map(({ item }) => item.point));
+    missing.forEach(({ item }, i) => (item.terrainM = elevations[i] ?? null));
+    for (const layer of poiLayers) for (const { item } of missing) if (layer.items.includes(item)) layer.setLevel(item, poiLevel(item));
+  } catch {
+    // Sin elevación se mantiene el estado calculado con la altura fija, sin reintentar en bucle.
+    missing.forEach(({ item }) => (item.terrainM = null));
+  } finally {
+    terrainPending = false;
+  }
+  renderNearby();
+}
 
 function selectPoi(item, def) {
   closePanels();
@@ -588,6 +613,7 @@ const gps = new GpsTracker({
     }
     if (!state.picked) subjectChanged();
     else renderGps();
+    maybeRenderNearby();
   },
   onError(err) {
     toast(err.message);
@@ -636,11 +662,110 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---------- Paneles ----------
-const panels = { layers: $('#panel-layers'), info: $('#panel-info') };
+const panels = { layers: $('#panel-layers'), info: $('#panel-info'), nearby: $('#panel-nearby') };
 
 function openPanel(name) {
   for (const [key, el] of Object.entries(panels)) el.hidden = key !== name || !el.hidden;
+  if (name === 'nearby') renderNearby();
 }
+
+// ---------- Sitios cerca ----------
+const NEARBY_LIMIT = 40;
+const FLYABLE = new Set(['ok', 'caution', 'limited']);
+const SHORT_STATUS = {
+  ok: 'Se puede volar',
+  caution: 'Precaución',
+  limited: 'Altura limitada',
+  restricted: 'Requiere autorización',
+  prohibited: 'Prohibido',
+  unknown: 'Evaluando…',
+};
+let nearbyItems = [];
+
+function nearbyOrigin() {
+  if (state.gps) return { point: [state.gps.lat, state.gps.lon], label: 'Desde tu ubicación', live: true };
+  if (state.picked) return { point: state.picked, label: 'Desde el punto seleccionado' };
+  const c = map.getCenter();
+  return { point: [c.lat, c.lng], label: 'Desde el centro del mapa · activa el GPS para usar tu ubicación' };
+}
+
+function bearing([lat1, lon1], [lat2, lon2]) {
+  const r = Math.PI / 180;
+  const y = Math.sin((lon2 - lon1) * r) * Math.cos(lat2 * r);
+  const x = Math.cos(lat1 * r) * Math.sin(lat2 * r) - Math.sin(lat1 * r) * Math.cos(lat2 * r) * Math.cos((lon2 - lon1) * r);
+  return (Math.atan2(y, x) / r + 360) % 360;
+}
+
+function renderNearby() {
+  if ($('#panel-nearby').hidden) return;
+  const origin = nearbyOrigin();
+  $('#nearby-origin').textContent = origin.label;
+  $('#nearby-flyable').checked = state.nearbyFlyable;
+
+  // Los sitios sin nombre de OSM sólo aportan ruido en una lista; los mapeados dos veces
+  // (mismo nombre a menos de 300 m) se muestran una vez.
+  const sorted = poiLayers
+    .filter((layer) => layer.visible)
+    .flatMap((layer) => layer.items.filter((item) => item.props.name).map((item) => ({ item, def: layer.def })))
+    .filter(({ item }) => !state.nearbyFlyable || FLYABLE.has(item.level))
+    .map((entry) => ({ ...entry, distance: haversine(origin.point, entry.item.point) }))
+    .sort((a, b) => a.distance - b.distance);
+  nearbyItems = [];
+  for (const entry of sorted) {
+    if (nearbyItems.length >= NEARBY_LIMIT) break;
+    const name = entry.item.props.name.toLowerCase();
+    const dup = nearbyItems.some((e) => e.item.props.name.toLowerCase() === name && haversine(e.item.point, entry.item.point) < 300);
+    if (!dup) nearbyItems.push(entry);
+  }
+  refineNearbyTerrain(nearbyItems);
+
+  $('#nearby-list').innerHTML = nearbyItems.length
+    ? nearbyItems
+        .map(({ item, def, distance }, i) => {
+          const type = POI_TYPES[item.props.type];
+          const meta = [`${formatDistance(distance)} ${cardinal(bearing(origin.point, item.point))}`, type?.label, def.style === 'icon' ? 'Destacado' : null];
+          return `
+            <li>
+              <button type="button" data-index="${i}">
+                <span class="poi-emoji">${type?.emoji ?? '📍'}</span>
+                <span class="nearby-text">
+                  <strong>${esc(poiName(item.props))}</strong>
+                  <small>${esc(meta.filter(Boolean).join(' · '))}</small>
+                </span>
+                <span class="status-chip" style="--c:${STATUS_COLORS[item.level]}">${SHORT_STATUS[item.level]}</span>
+              </button>
+            </li>`;
+        })
+        .join('')
+    : `<li class="muted small">${poiLayers.length ? 'No hay sitios que coincidan.' : 'Aún no hay sitios para este país.'}</li>`;
+}
+
+// Con el GPS activo la lista se reordena mientras te mueves, sin redibujar en cada lectura.
+let nearbyRenderedAt = 0;
+function maybeRenderNearby() {
+  if (Date.now() - nearbyRenderedAt < 5000) return;
+  nearbyRenderedAt = Date.now();
+  renderNearby();
+}
+
+$('#btn-nearby').addEventListener('click', () => openPanel('nearby'));
+
+$('#nearby-flyable').addEventListener('change', (e) => {
+  state.nearbyFlyable = e.target.checked;
+  storage.set('nearbyFlyable', e.target.checked ? '1' : '0');
+  renderNearby();
+});
+
+$('#nearby-list').addEventListener('click', (e) => {
+  const entry = nearbyItems[e.target.closest('button[data-index]')?.dataset.index];
+  if (!entry) return;
+  map.setView(entry.item.point, Math.max(map.getZoom(), 13));
+  selectPoi(entry.item, entry.def);
+});
+
+map.on('moveend', () => {
+  if (!state.gps && !state.picked) renderNearby();
+});
 
 function closePanels() {
   const wasOpen = Object.values(panels).some((el) => !el.hidden);
@@ -771,6 +896,7 @@ $('#poi-list').addEventListener('change', (e) => {
   storage.setJSON('hiddenPois', [...state.hiddenPois]);
   layer.visible = e.target.checked;
   layer.refresh();
+  renderNearby();
 });
 
 $('#hide-blocked').addEventListener('change', (e) => {

@@ -29,6 +29,10 @@ App web progresiva (PWA) para ver las zonas permitidas y restringidas de vuelo p
 - **Sitios de interés para volar (Colombia).** Cada marcador lleva un borde con el color de su estado de vuelo, calculado con las zonas cargadas. Al tocarlo se abre su ficha con la evaluación y las condiciones. Hay un filtro para ocultar los sitios donde no se puede volar.
   - **47 sitios destacados** (`data/co/sitios.geojson`): paisajes icónicos con descripción y consejo. Sus coordenadas están verificadas con Nominatim/OpenStreetMap y se pueden editar a mano.
   - **1.792 miradores y cascadas de OpenStreetMap** (`data/co/miradores-osm.geojson`), visibles al acercar el mapa. Se actualizan con `node tools/update-osm-sitios.mjs CO`.
+- **Sitios cerca de ti.** Botón 📍: lista los 40 sitios más cercanos con distancia, dirección y estado de vuelo.
+  - Se ordena desde tu ubicación GPS (se reordena mientras te mueves), desde el punto seleccionado o desde el centro del mapa.
+  - Filtro «Solo donde se puede volar».
+  - Para los sitios con techo absoluto consulta la elevación del terreno en lote, así el estado coincide con el de la ficha.
 - **Consulta de cualquier punto.** Toca el mapa, busca un lugar o escribe coordenadas (`6.1645, -75.348`).
 - **Semáforo de estado.** Prohibido, requiere autorización, altura limitada, precaución, sin restricciones conocidas o **datos incompletos**. Nunca muestra luz verde si falta alguna capa. Muestra el detalle y las observaciones oficiales de cada zona.
 - **Altura máxima real.** Con la elevación del terreno (Open-Meteo, modelo Copernicus de 90 m) convierte los techos absolutos en altura sobre el suelo. Por ejemplo, en el anillo de 6–9 km de un aeropuerto colombiano el límite es la elevación de referencia + 61 m.

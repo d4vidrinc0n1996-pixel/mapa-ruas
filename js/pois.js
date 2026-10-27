@@ -79,16 +79,17 @@ export class PoiLayer {
     });
   }
 
-  // evaluate(point) -> nivel ('ok', 'caution', … o 'unknown').
+  // evaluate(item) -> nivel ('ok', 'caution', … o 'unknown').
   setStatus(evaluate) {
-    for (const item of this.items) {
-      const level = evaluate(item.point);
-      if (level === item.level) continue;
-      item.level = level;
-      if (this.def.style === 'dot') item.marker.setStyle({ fillColor: STATUS_COLORS[level] });
-      else item.marker.setIcon(this.icon(item));
-    }
+    for (const item of this.items) this.setLevel(item, evaluate(item));
     if (this.hideBlocked) this.refresh();
+  }
+
+  setLevel(item, level) {
+    if (level === item.level) return;
+    item.level = level;
+    if (this.def.style === 'dot') item.marker.setStyle({ fillColor: STATUS_COLORS[level] });
+    else item.marker.setIcon(this.icon(item));
   }
 
   refresh() {

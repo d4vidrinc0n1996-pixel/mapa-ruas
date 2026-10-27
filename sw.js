@@ -1,8 +1,8 @@
 // Service worker: app instalable y uso sin conexión con los últimos datos descargados.
 
-const SHELL_CACHE = 'mapa-ruas-shell-v5';
-const DATA_CACHE = 'mapa-ruas-data-v5';
-const TILE_CACHE = 'mapa-ruas-tiles-v5';
+const SHELL_CACHE = 'mapa-ruas-shell-v6';
+const DATA_CACHE = 'mapa-ruas-data-v6';
+const TILE_CACHE = 'mapa-ruas-tiles-v6';
 const MAX_TILES = 2000;
 
 const SHELL = [

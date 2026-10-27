@@ -849,6 +849,73 @@ code {
   color: var(--muted);
 }
 
+.panel .nearby-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.nearby-list li {
+  margin: 0;
+}
+
+.nearby-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.nearby-list button:hover,
+.nearby-list button:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.nearby-list .poi-emoji {
+  flex: none;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.nearby-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.nearby-text strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nearby-text small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.status-chip {
+  flex: none;
+  max-width: 42%;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 999px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+  border: 1px solid var(--c);
+}
+
 .pick-marker span {
   display: block;
   width: 26px;
