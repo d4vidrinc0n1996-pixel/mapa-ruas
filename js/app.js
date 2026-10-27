@@ -246,7 +246,7 @@ function subjectChanged() {
 
 // Nunca se da luz verde si faltan capas o el punto no se ha podido evaluar del todo.
 function displayLevel(r, zones) {
-  const incomplete = !r.outside && (!r.complete || zones.loading || zones.failed);
+  const incomplete = !r.outside && (!r.complete || zones.loadingRequired || zones.failed);
   return r.level === 'ok' && incomplete ? 'unknown' : r.level;
 }
 
@@ -330,6 +330,12 @@ function renderStatus() {
   if (!r.complete) notes.push('<p class="note">Cargando las zonas de esta área… el resultado puede cambiar.</p>');
   else if (zones.loading) notes.push('<p class="note">Cargando capas oficiales… el resultado puede cambiar.</p>');
   else if (zones.failed) notes.push('<p class="note warn">Algunas capas no se cargaron: el resultado puede estar incompleto. Revisa el panel de capas.</p>');
+  const optionalFailed = zones.failedOptional;
+  if (optionalFailed.length) {
+    notes.push(
+      `<p class="note">No se pudo cargar: ${esc(optionalFailed.map((l) => l.label.toLowerCase()).join(', '))}. Consulta también a la autoridad ambiental de la zona.</p>`,
+    );
+  }
   if (r.noHeadroom) {
     notes.push(
       `<p class="note warn">El terreno aquí (${Math.round(terrainM)} m s.n.m.) ya supera el techo permitido: cualquier vuelo requiere autorización.</p>`,
@@ -692,7 +698,7 @@ function renderLayersPanel() {
       if (!st) info = layer.id === 'custom' ? 'Ninguna' : '';
       else if (st.state === 'loading') info = st.tiled ? `${st.count} cargados · cargando…` : 'Cargando…';
       else if (st.state === 'error') info = `<span class="err">Error</span> · <button class="link" type="button" data-retry="${layer.id}">Reintentar</button>`;
-      else info = st.tiled ? `${st.count} cargados · se cargan al acercar` : `${st.count} elementos`;
+      else info = st.tiled ? `${st.count} cargados · se cargan al acercar` : `${st.count} elementos${st.fallback ? ` · ${st.fallback}` : ''}`;
       const legend = layer.legend ?? CATEGORY_LABEL[cat];
       return `
         <label class="layer-row">

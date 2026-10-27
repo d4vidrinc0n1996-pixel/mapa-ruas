@@ -13,10 +13,10 @@ App web progresiva (PWA) para ver las zonas permitidas y restringidas de vuelo p
       - Áreas AIP
       - Aviación deportiva
       - Infraestructura aeronáutica
-    - **Áreas protegidas del RUNAP** (servidor de Parques Nacionales Naturales):
-      - Parques y santuarios nacionales: requiere autorización de PNN.
-      - Áreas regionales: precaución, consultar a la autoridad ambiental.
-      - Se omiten las reservas privadas de la sociedad civil.
+    - **Parques Nacionales Naturales**: límites oficiales de las 66 áreas del sistema, publicados por PNN en ArcGIS Online. Requieren autorización de PNN.
+    - **Áreas protegidas regionales** del RUNAP: precaución, consulta a la autoridad ambiental. Se omiten las reservas privadas de la sociedad civil.
+      - El servidor oficial del RUNAP es lento y a veces falla. Entonces se usa una copia de diciembre de 2023 en ArcGIS Online.
+      - Si ambas fuentes fallan, se avisa sin bloquear el resultado (capa `optional`).
   - **España:** zonas geográficas UAS de ENAIRE en formato ED-269, el estándar europeo: aeronáuticas, urbanas e infraestructuras.
   - **Estados Unidos:** capas de la FAA:
     - Espacio controlado con techos LAANC
@@ -94,6 +94,8 @@ tools/make-icons.mjs    Genera los iconos PNG (npm run icons)
    - `source`: `{ type: 'arcgis', url }` para servicios ArcGIS, o `{ type: 'geojson', url }` para un archivo GeoJSON (local en `data/<código>/` o remoto con CORS). Si la capa es grande, añade `tiled: { tileDeg, minZoom }` para cargarla por zona visible.
    - `category`: `prohibited`, `restricted`, `limited`, `caution` o `info`. También puede ser una función de las propiedades.
    - `name`, `subtitle`, `details`, `maxAltitudeM`, `ceilingAmslM` y `radiusM` (para puntos), como valores o funciones.
+   - `fallback: { label, source, normalize }` para una fuente alternativa si la principal falla.
+   - `optional: true` para capas que solo aportan precauciones: si fallan no bloquean el resultado.
    - Si el país publica en formato **ED-269** (estándar de la UE), basta con `...ED269` de `js/sources.js` (ver `es.js`).
 3. Opcional: añade `pois` con archivos GeoJSON de sitios de interés (ver `co.js`). `node tools/update-osm-sitios.mjs <código>` genera los miradores y cascadas de OSM del país.
 4. Regístralo en `js/countries/index.js` (con sus `bounds`) y agrega el archivo a la lista `SHELL` de `sw.js`.

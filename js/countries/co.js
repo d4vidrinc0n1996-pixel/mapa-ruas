@@ -14,19 +14,17 @@ const AIP_CATEGORY = {
 
 const capitalize = (s) => (s ? s.charAt(0) + s.slice(1).toLowerCase() : '');
 
-// Registro Único Nacional de Áreas Protegidas, servido por Parques Nacionales Naturales.
+// Límites oficiales del Sistema de Parques Nacionales, publicados por PNN en ArcGIS Online.
+const PNN = 'https://services1.arcgis.com/flBhk9lC6HvZV0Sw/arcgis/rest/services/Limite_Poligono_PNN_AGOL/FeatureServer/3';
+// Registro Único Nacional de Áreas Protegidas (servidor propio de PNN, a veces lento o caído).
 const RUNAP = 'https://mapas.parquesnacionales.gov.co/arcgis/rest/services/pnn/runap/MapServer/0';
+// Copia del RUNAP (diciembre de 2023) en ArcGIS Online, usada si el servidor oficial no responde.
+const RUNAP_COPIA =
+  'https://services3.arcgis.com/dlXCaGL4ItoCQfIF/arcgis/rest/services/%C3%81reas_Protegidas_Colombia___RUNAP/FeatureServer/59';
 
-// Áreas del Sistema de Parques Nacionales: volar drones exige autorización de PNN.
-// El resto (regionales, reservas forestales, distritos) depende de cada autoridad ambiental.
-const SISTEMA_PNN = new Set([
-  'Parque Nacional Natural',
-  'Santuario de Fauna y Flora',
-  'Santuario de Flora',
-  'Reserva Natural',
-  'Área Natural Única',
-  'Vía Parque',
-]);
+// Sigla de PNN: p parque, s santuario, r reserva, v vía parque, a área natural única
+// -> volar drones exige autorización. d (distrito de manejo integrado) admite usos: precaución.
+const pnnCategory = (p) => (String(p.ap_sigla ?? '').startsWith('d') ? 'caution' : 'restricted');
 
 // Varios helipuertos no traen NOMBRE: se usa el explotador y el código OACI.
 const heliport = {
@@ -58,32 +56,56 @@ export default {
   layers: [
     {
       id: 'protegidas',
-      label: 'Áreas protegidas (RUNAP)',
-      legend: 'Parques Nacionales: autorización · regionales: consultar',
-      legendCategory: 'restricted',
+      label: 'Áreas protegidas regionales',
+      legend: 'RUNAP · consultar a la autoridad ambiental',
+      legendCategory: 'caution',
+      // Si el servidor del RUNAP falla, se avisa pero no se bloquea el resultado (sólo aporta precauciones).
+      optional: true,
       source: {
         type: 'arcgis',
         format: 'esrijson',
         url: RUNAP,
-        // Las reservas de la sociedad civil son predios privados: se omiten.
-        where: "ap_categoria <> 'Reserva Natural de la Sociedad Civil'",
+        // Sin el sistema nacional (capa siguiente) ni las reservas privadas de la sociedad civil.
+        where: "organizacion <> 'Parques Nacionales Naturales de Colombia' AND ap_categoria <> 'Reserva Natural de la Sociedad Civil'",
         outFields: 'ap_categoria,ap_nombre,organizacion,url',
         orderBy: 'objectid',
         simplify: 0.0004,
-        pageSize: 1000,
+        pageSize: 200,
       },
-      category: (p) => (SISTEMA_PNN.has(p.ap_categoria) ? 'restricted' : 'caution'),
+      fallback: {
+        label: 'copia de respaldo (dic. 2023)',
+        source: {
+          type: 'arcgis',
+          url: RUNAP_COPIA,
+          where: "Organización <> 'Parques Nacionales Naturales de Colombia' AND Categoría <> 'Reserva Natural de la Sociedad Civil'",
+          outFields: 'Nombre,Categoría,Organización,URL',
+          simplify: 0.0004,
+        },
+        normalize: (p) => ({ ap_categoria: p['Categoría'], ap_nombre: p.Nombre, organizacion: p['Organización'], url: p.URL }),
+      },
+      category: 'caution',
       name: (p) => `${p.ap_categoria} ${p.ap_nombre}`,
       subtitle: (p) => p.organizacion,
       details: (p) =>
         [
-          SISTEMA_PNN.has(p.ap_categoria)
-            ? 'Área del Sistema de Parques Nacionales: para volar drones necesitas autorización de Parques Nacionales Naturales de Colombia.'
-            : 'Área protegida: consulta a la autoridad ambiental que la administra las restricciones para drones antes de volar.',
+          'Área protegida: consulta a la autoridad ambiental que la administra las restricciones para drones antes de volar.',
           p.url ? `Más información: ${p.url}` : '',
         ]
           .filter(Boolean)
           .join('\n'),
+    },
+    {
+      id: 'parques',
+      label: 'Parques Nacionales Naturales',
+      legend: 'Sistema de PNN · requiere autorización',
+      source: { type: 'arcgis', url: PNN, orderBy: 'objectid', simplify: 0.0004 },
+      category: pnnCategory,
+      name: (p) => `${p.ap_categoria} ${p.ap_nombre}`,
+      subtitle: () => 'Parques Nacionales Naturales de Colombia',
+      details: (p) =>
+        pnnCategory(p) === 'restricted'
+          ? 'Área del Sistema de Parques Nacionales: para volar drones necesitas autorización de Parques Nacionales Naturales de Colombia.'
+          : 'Distrito de manejo integrado del Sistema de Parques Nacionales: consulta a Parques Nacionales las condiciones para volar drones.',
     },
     {
       id: 'aip',

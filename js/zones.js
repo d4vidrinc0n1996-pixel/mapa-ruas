@@ -33,8 +33,17 @@ export class ZoneStore extends EventTarget {
     return [...this.status.values()].some((s) => s.state === 'loading');
   }
 
+  get loadingRequired() {
+    return this.country.layers.some((l) => !l.optional && this.status.get(l.id)?.state === 'loading');
+  }
+
+  // Capas obligatorias que fallaron: sin ellas no se puede dar luz verde.
   get failed() {
-    return [...this.status.values()].some((s) => s.state === 'error');
+    return this.country.layers.some((l) => !l.optional && this.status.get(l.id)?.state === 'error');
+  }
+
+  get failedOptional() {
+    return this.country.layers.filter((l) => l.optional && this.status.get(l.id)?.state === 'error');
   }
 
   recount() {
@@ -77,15 +86,29 @@ export class ZoneStore extends EventTarget {
     this.status.set(layer.id, { state: 'loading' });
     this.emit('status');
     try {
-      const collection = await fetchSource(layer.source);
-      const features = geojsonToFeatures(collection, layer);
+      const features = await this.fetchLayer(layer);
       this.replace((f) => f.layer.id === layer.id, features);
-      this.status.set(layer.id, { state: 'ok', count: features.length });
+      this.status.set(layer.id, { state: 'ok', count: features.length, fallback: features.fallback });
       this.loadedAt = new Date();
     } catch (err) {
       this.status.set(layer.id, { state: 'error', error: err.message });
     }
     this.emit('status');
+  }
+
+  // Si la fuente principal falla y la capa define `fallback`, se usa la copia alternativa
+  // traduciendo sus campos a los de la principal.
+  async fetchLayer(layer) {
+    try {
+      return geojsonToFeatures(await fetchSource(layer.source), layer);
+    } catch (err) {
+      if (!layer.fallback) throw err;
+      const collection = await fetchSource(layer.fallback.source);
+      for (const f of collection.features) f.properties = layer.fallback.normalize(f.properties ?? {});
+      const features = geojsonToFeatures(collection, layer);
+      features.fallback = layer.fallback.label;
+      return features;
+    }
   }
 
   setCustom(features) {
