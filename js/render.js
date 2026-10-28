@@ -41,16 +41,17 @@ export class ZoneRenderer {
   }
 
   build(f) {
-    const color = COLORS[f.category] ?? COLORS.restricted;
+    const color = f.color ?? COLORS[f.category] ?? COLORS.restricted;
     const style = {
       renderer: this.renderers.get(f.layer.id) ?? this.fallback,
       interactive: false,
       color,
+      dashArray: f.layer.dashArray,
       weight: 1.2,
       opacity: 0.9,
       fillColor: color,
       // Opacidad baja: en ciudades se superponen muchas zonas y no deben tapar el mapa base.
-      fillOpacity: f.category === 'limited' || f.category === 'caution' ? 0.08 : 0.12,
+      fillOpacity: f.layer.dji ? 0.05 : f.category === 'limited' || f.category === 'caution' ? 0.08 : 0.12,
     };
     if (f.kind === 'point') {
       return L.circleMarker(f.center, { ...style, radius: 4, weight: 1.5, color: '#fff', fillOpacity: 1 });

@@ -857,6 +857,67 @@ code {
   gap: 6px;
 }
 
+.dji-box {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+}
+
+.dji-box h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.dji-box h3 small {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dji-box p {
+  margin: 4px 0 0;
+}
+
+.dji-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dji-list li {
+  display: flex;
+  gap: 10px;
+}
+
+.dji-list strong {
+  display: block;
+}
+
+.dji-list small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.panel select {
+  width: 100%;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
 .nearby-list li {
   margin: 0;
 }

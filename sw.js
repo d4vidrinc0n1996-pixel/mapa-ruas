@@ -1,8 +1,8 @@
 // Service worker: app instalable y uso sin conexión con los últimos datos descargados.
 
-const SHELL_CACHE = 'mapa-ruas-shell-v6';
-const DATA_CACHE = 'mapa-ruas-data-v6';
-const TILE_CACHE = 'mapa-ruas-tiles-v6';
+const SHELL_CACHE = 'mapa-ruas-shell-v7';
+const DATA_CACHE = 'mapa-ruas-data-v7';
+const TILE_CACHE = 'mapa-ruas-tiles-v7';
 const MAX_TILES = 2000;
 
 const SHELL = [
@@ -12,6 +12,7 @@ const SHELL = [
   'js/app.js',
   'js/basemaps.js',
   'js/conditions.js',
+  'js/dji.js',
   'js/geo.js',
   'js/gps.js',
   'js/pois.js',
@@ -42,6 +43,7 @@ const isData = (url) =>
   (url.hostname.endsWith('.arcgis.com') && url.pathname.includes('/FeatureServer/')) ||
   url.hostname === 'servais.enaire.es' ||
   url.hostname === 'mapas.parquesnacionales.gov.co' ||
+  url.hostname === 'flysafe-api.dji.com' ||
   url.hostname === 'api.open-meteo.com' ||
   url.hostname === 'services.swpc.noaa.gov';
 

@@ -19,7 +19,9 @@ export const CATEGORIES = ['prohibited', 'restricted', 'limited', 'caution'];
 const DEFAULT_SIMPLIFY = 0.00003;
 
 // bbox: [sur, oeste, norte, este] para pedir sólo una parte de la capa.
+// source.fetch(bbox) permite fuentes con su propio cliente (p. ej. DJI).
 export async function fetchSource(source, { signal, bbox } = {}) {
+  if (source.fetch) return source.fetch(bbox);
   const urls = [].concat(source.url);
   const parts = await Promise.all(
     urls.map((url) => (source.type === 'arcgis' ? fetchArcgis(url, source, signal, bbox) : fetchJson(url, signal))),
@@ -124,6 +126,7 @@ export function geojsonToFeatures(collection, layer) {
       group: clean(pick(layer.group)) || null,
       maxAltitudeM: pick(layer.maxAltitudeM) ?? null,
       ceilingAmslM: pick(layer.ceilingAmslM) ?? null,
+      color: pick(layer.color) ?? null,
     };
     if (geometry.type === 'Point') {
       const center = [geometry.coordinates[1], geometry.coordinates[0]];

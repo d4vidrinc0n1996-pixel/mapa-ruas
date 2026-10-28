@@ -6,6 +6,7 @@ import { CUSTOM_LAYER, geojsonToFeatures } from './sources.js';
 import { BASEMAPS, PROVIDERS, createBaseLayers, getKeys, saveKeys } from './basemaps.js';
 import { fetchWeather, fetchElevation, fetchElevations, fetchKp, assess, describeWeather, kpLabel } from './conditions.js';
 import { PoiLayer, POI_TYPES, STATUS_COLORS, poiName } from './pois.js';
+import { DJI_LAYER, djiLevel, fetchDrones, getDrone, setDrone } from './dji.js';
 import { storage } from './storage.js';
 import { haversine, formatDistance, formatCoord } from './geo.js';
 
@@ -58,7 +59,8 @@ const LEVELS = {
   unknown: {
     icon: '?',
     title: 'Datos incompletos',
-    text: () => 'Todavía no se han cargado todas las zonas de este punto. No asumas que puedes volar.',
+    text: () =>
+      'Todavía no se han cargado todas las zonas de este punto y alguna podría ser más estricta. No asumas que puedes volar.',
   },
 };
 
@@ -81,6 +83,7 @@ const state = {
   hiddenPois: new Set(storage.getJSON('hiddenPois') ?? []),
   hideBlockedPois: storage.get('hideBlockedPois') === '1',
   nearbyFlyable: storage.get('nearbyFlyable') === '1',
+  djiDrones: [],
 };
 
 let poiLayers = [];
@@ -172,7 +175,9 @@ function loadVisible() {
 
 // ---------- País ----------
 async function switchCountry(code) {
-  const country = await loadCountry(code);
+  // Las zonas de DJI son globales: se añaden como capa opcional a cualquier país.
+  const base = await loadCountry(code);
+  const country = { ...base, layers: [...base.layers, DJI_LAYER] };
   state.country = country;
   storage.set('country', country.code);
   $('#country').value = country.code;
@@ -245,10 +250,11 @@ function subjectChanged() {
   renderStatus();
 }
 
-// Nunca se da luz verde si faltan capas o el punto no se ha podido evaluar del todo.
+// Si faltan capas obligatorias, una zona aún no cargada podría ser más estricta: sólo
+// «prohibido» es definitivo (nada lo empeora); cualquier otro nivel se muestra como incompleto.
 function displayLevel(r, zones) {
   const incomplete = !r.outside && (!r.complete || zones.loadingRequired || zones.failed);
-  return r.level === 'ok' && incomplete ? 'unknown' : r.level;
+  return incomplete && r.level !== 'prohibited' ? 'unknown' : r.level;
 }
 
 // Estado de vuelo de un sitio. Si ya se conoce la elevación de su terreno se usa para
@@ -355,7 +361,8 @@ function renderStatus() {
   if (!r.complete) notes.push('<p class="note">Cargando las zonas de esta área… el resultado puede cambiar.</p>');
   else if (zones.loading) notes.push('<p class="note">Cargando capas oficiales… el resultado puede cambiar.</p>');
   else if (zones.failed) notes.push('<p class="note warn">Algunas capas no se cargaron: el resultado puede estar incompleto. Revisa el panel de capas.</p>');
-  const optionalFailed = zones.failedOptional;
+  // DJI tiene su propio aviso en la ficha.
+  const optionalFailed = zones.failedOptional.filter((l) => !l.dji);
   if (optionalFailed.length) {
     notes.push(
       `<p class="note">No se pudo cargar: ${esc(optionalFailed.map((l) => l.label.toLowerCase()).join(', '))}. Consulta también a la autoridad ambiental de la zona.</p>`,
@@ -379,7 +386,8 @@ function renderStatus() {
     ${s.kind === 'picked' && state.poi ? poiHtml(state.poi) : ''}
     <p class="level-text">${esc(level.text(r, c))}</p>
     ${notes.join('')}
-    ${r.hits.length ? `<ul class="hit-list">${r.hits.map(hitHtml).join('')}</ul>` : ''}`;
+    ${r.hits.length ? `<ul class="hit-list">${r.hits.map(hitHtml).join('')}</ul>` : ''}
+    ${djiHtml(r)}`;
   if (html !== hitsEl.dataset.html) {
     const open = new Set([...hitsEl.querySelectorAll('details[open]')].map((d) => d.dataset.id));
     hitsEl.innerHTML = html;
@@ -404,6 +412,49 @@ function poiHtml(poi) {
         ${poi.tip ? `<p class="tip">💡 ${esc(poi.tip)}</p>` : ''}
         ${osmId ? `<a class="small" href="https://www.openstreetmap.org/${esc(osmType)}/${esc(osmId)}" target="_blank" rel="noopener">Ver en OpenStreetMap</a>` : ''}
       </div>
+    </div>`;
+}
+
+// Qué hará un dron DJI en el punto, según su geovalla. Va aparte de la normativa.
+function djiHtml(r) {
+  if (r.outside) return '';
+  const drone = state.djiDrones.find((d) => d.slug === getDrone())?.name ?? getDrone();
+  const status = state.zones.status.get('dji');
+  let body;
+  if (r.dji.hits.length) {
+    // Una fila por tipo de zona, de la más a la menos restrictiva.
+    const rank = (f) => ({ 2: 5, 7: 5, 1: 4, 10: 3, 3: 2, 0: 1 })[f.props.level] ?? 0;
+    const byLabel = new Map();
+    for (const f of [...r.dji.hits].sort((a, b) => rank(b) - rank(a))) {
+      const info = djiLevel(f.props);
+      if (!byLabel.has(info.label)) byLabel.set(info.label, { info, f, names: new Set() });
+      byLabel.get(info.label).names.add(f.name);
+    }
+    body = `<ul class="dji-list">${[...byLabel.values()]
+      .map(
+        ({ info, f, names }) => `
+          <li>
+            <span class="swatch" style="--c:${info.color}"></span>
+            <div>
+              <strong>${esc(info.label)}</strong>
+              <small>${esc([...names].join(' · '))}</small>
+              <p>${esc(info.effect(f.props.height))}</p>
+            </div>
+          </li>`,
+      )
+      .join('')}</ul>`;
+  } else if (!r.dji.complete || status?.state === 'loading') {
+    body = '<p class="muted small">Consultando zonas de DJI…</p>';
+  } else if (status?.state === 'error') {
+    body = '<p class="muted small">No se pudieron consultar las zonas de DJI.</p>';
+  } else {
+    body = '<p class="small">Sin zonas GEO de DJI: el dron no debería mostrar avisos ni bloqueos aquí.</p>';
+  }
+  return `
+    <div class="dji-box">
+      <h3>Tu dron DJI <small>${esc(drone)}</small></h3>
+      ${body}
+      <p class="muted small">Límites del fabricante según DJI FlySafe (no oficial). No reemplazan la normativa.</p>
     </div>`;
 }
 
@@ -828,7 +879,7 @@ function renderLayersPanel() {
       return `
         <label class="layer-row">
           <input type="checkbox" data-layer="${layer.id}" ${state.hidden.has(layer.id) ? '' : 'checked'}>
-          <span class="swatch ${cat === 'info' ? 'dot' : ''}" style="--c:${COLORS[cat]}"></span>
+          <span class="swatch ${cat === 'info' ? 'dot' : ''}" style="--c:${layer.legendColor ?? COLORS[cat]}"></span>
           <span><strong>${esc(layer.label)}</strong><small>${esc(legend)}${info ? ` · ${info}` : ''}</small></span>
         </label>`;
     })
@@ -885,6 +936,27 @@ $('#layer-list').addEventListener('change', (e) => {
   storage.setJSON('hiddenLayers', [...state.hidden]);
   renderer.setVisible(id, e.target.checked);
   loadVisible();
+});
+
+function renderDroneSelect() {
+  const current = getDrone();
+  const list = state.djiDrones.some((d) => d.slug === current) ? state.djiDrones : [{ slug: current, name: current }, ...state.djiDrones];
+  $('#dji-drone').innerHTML = list
+    .map((d) => `<option value="${esc(d.slug)}" ${d.slug === current ? 'selected' : ''}>${esc(d.name)}</option>`)
+    .join('');
+}
+
+$('#dji-drone').addEventListener('change', (e) => {
+  setDrone(e.target.value);
+  // Las zonas cambian según el modelo: se descarta lo cargado y se pide de nuevo.
+  state.zones?.resetLayer('dji');
+  renderStatus();
+});
+
+fetchDrones().then((drones) => {
+  state.djiDrones = drones;
+  renderDroneSelect();
+  renderStatus();
 });
 
 $('#poi-list').addEventListener('change', (e) => {
@@ -1032,6 +1104,7 @@ $('#country').innerHTML = COUNTRIES.map((c) => `<option value="${c.code}">${c.na
 $('#country').addEventListener('change', (e) => switchCountry(e.target.value));
 renderBaseChips();
 renderKeyFields();
+renderDroneSelect();
 updateLocateButton();
 if (!BASEMAPS[state.base]) state.base = 'claro';
 setBaseLayer(state.base);

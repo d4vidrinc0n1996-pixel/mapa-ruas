@@ -154,11 +154,22 @@ export class ZoneStore extends EventTarget {
     for (const layer of this.country.layers.filter(isTiled)) this.loadTile(layer, this.tileKey(layer, lat, lon));
   }
 
-  isComplete([lat, lon]) {
+  // optional: true para preguntar por las capas opcionales (p. ej. DJI) en vez de las obligatorias.
+  isComplete([lat, lon], { optional = false } = {}) {
     if (!this.inCountry([lat, lon])) return true;
     return this.country.layers
-      .filter(isTiled)
+      .filter((layer) => isTiled(layer) && Boolean(layer.optional) === optional)
       .every((layer) => this.tiles.get(`${layer.id}/${this.tileKey(layer, lat, lon)}`)?.done);
+  }
+
+  // Descarta todo lo cargado de una capa (p. ej. al cambiar de modelo de dron) y avisa para recargarla.
+  resetLayer(layerId) {
+    for (const key of [...this.tiles.keys()]) if (key.startsWith(`${layerId}/`)) this.tiles.delete(key);
+    this.tileState.set(layerId, { pending: 0, error: null });
+    this.replace((f) => f.layer.id === layerId, []);
+    const layer = this.country.layers.find((l) => l.id === layerId);
+    if (layer) this.updateTiledStatus(layer);
+    this.emit('retry');
   }
 
   loadTile(layer, key) {
@@ -230,21 +241,18 @@ export class ZoneStore extends EventTarget {
     const margin = this.country.cautionMarginM ?? 500;
     const severity = (h) => SEVERITY[h.feature.category];
     let hits = [];
+    const djiHits = [];
 
     for (const f of this.features.values()) {
-      if (f.kind === 'point' || !(f.category in SEVERITY)) continue;
-      let inside;
-      let distance;
-      if (f.kind === 'circle') {
-        const edge = haversine(pt, f.center) - f.radius;
-        inside = edge <= 0;
-        distance = Math.max(0, edge);
-      } else {
-        if (!bboxContains(f.bbox, pt, margin)) continue;
-        inside = pointInRings(pt, f.rings);
-        distance = inside ? 0 : distanceToRings(pt, f.rings);
-      }
-      if (inside || distance <= margin) hits.push({ feature: f, inside, distance });
+      if (f.kind === 'point') continue;
+      // Las zonas de DJI no son normativa: se informan aparte y no cambian el nivel.
+      const dji = Boolean(f.layer.dji);
+      if (!dji && !(f.category in SEVERITY)) continue;
+      const place = locate(f, pt, dji ? 0 : margin);
+      if (!place) continue;
+      if (dji) {
+        if (place.inside) djiHits.push(f);
+      } else if (place.inside || place.distance <= margin) hits.push({ feature: f, ...place });
     }
 
     // Dentro de varias zonas del mismo grupo (p. ej. 6 y 9 km de un aeropuerto) sólo cuenta la más severa.
@@ -291,6 +299,18 @@ export class ZoneStore extends EventTarget {
       noHeadroom,
       outside: !this.inCountry(pt),
       complete: this.isComplete(pt),
+      dji: { hits: djiHits, complete: this.isComplete(pt, { optional: true }) },
     };
   }
+}
+
+// ¿El punto está dentro de la zona, o a qué distancia de su borde? null si queda lejos.
+function locate(f, pt, margin) {
+  if (f.kind === 'circle') {
+    const edge = haversine(pt, f.center) - f.radius;
+    return { inside: edge <= 0, distance: Math.max(0, edge) };
+  }
+  if (!bboxContains(f.bbox, pt, margin)) return null;
+  const inside = pointInRings(pt, f.rings);
+  return { inside, distance: inside ? 0 : distanceToRings(pt, f.rings) };
 }
