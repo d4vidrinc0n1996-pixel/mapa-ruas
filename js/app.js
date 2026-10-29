@@ -7,6 +7,7 @@ import { BASEMAPS, PROVIDERS, createBaseLayers, getKeys, saveKeys } from './base
 import { fetchWeather, fetchElevation, fetchElevations, fetchKp, assess, describeWeather, kpLabel } from './conditions.js';
 import { PoiLayer, POI_TYPES, STATUS_COLORS, poiName } from './pois.js';
 import { DJI_LAYER, djiLevel, fetchDrones, getDrone, setDrone } from './dji.js';
+import { arcgisCapabilities, validateArcgisKey, arcgisGeocode, arcgisElevation, arcgisElevations } from './arcgis.js';
 import { storage } from './storage.js';
 import { haversine, formatDistance, formatCoord } from './geo.js';
 
@@ -273,6 +274,34 @@ const schedulePoiStatus = debounce(() => {
   renderNearby();
 }, 400);
 
+// Elevación del terreno: ArcGIS si la clave tiene ese servicio (mejor resolución); si no,
+// o si falla, Open-Meteo (modelo de 90 m).
+const arcgis = () => ({ key: state.keys.arcgis, caps: arcgisCapabilities(state.keys.arcgis) });
+
+async function fetchTerrain(point) {
+  const { key, caps } = arcgis();
+  if (caps.elevation) {
+    try {
+      return { value: await arcgisElevation(point, key), source: 'ArcGIS' };
+    } catch {
+      /* se usa Open-Meteo */
+    }
+  }
+  return { value: await fetchElevation(point), source: 'Open-Meteo' };
+}
+
+async function fetchTerrainMany(points) {
+  const { key, caps } = arcgis();
+  if (caps.elevation) {
+    try {
+      return await arcgisElevations(points, key);
+    } catch {
+      /* se usa Open-Meteo */
+    }
+  }
+  return fetchElevations(points);
+}
+
 // Pide la elevación de los sitios listados que dependen de ella y los reevalúa.
 let terrainPending = false;
 async function refineNearbyTerrain(entries) {
@@ -280,7 +309,7 @@ async function refineNearbyTerrain(entries) {
   if (!missing.length || terrainPending) return;
   terrainPending = true;
   try {
-    const elevations = await fetchElevations(missing.map(({ item }) => item.point));
+    const elevations = await fetchTerrainMany(missing.map(({ item }) => item.point));
     missing.forEach(({ item }, i) => (item.terrainM = elevations[i] ?? null));
     for (const layer of poiLayers) for (const { item } of missing) if (layer.items.includes(item)) layer.setLevel(item, poiLevel(item));
   } catch {
@@ -510,7 +539,9 @@ function refreshConditions() {
   if (!cond.terrainPoint || haversine(cond.terrainPoint, point) > 100) {
     track('terrain', async () => {
       try {
-        cond.terrainM = await fetchElevation(point);
+        const terrain = await fetchTerrain(point);
+        cond.terrainM = terrain.value;
+        cond.terrainSource = terrain.source;
         cond.terrainPoint = point;
       } catch {
         /* sin elevación: se usan las alturas fijas de cada zona */
@@ -576,7 +607,7 @@ function renderConditions() {
   if (cond.kp?.kp != null) {
     items.push(['Índice Kp', `${cond.kp.kp.toFixed(1)} (${kpLabel(cond.kp.kp)})${cond.kp.max24h != null ? ` · máx. 24 h ${cond.kp.max24h.toFixed(1)}` : ''}`]);
   }
-  if (terrainM != null) items.push(['Terreno', `${Math.round(terrainM).toLocaleString('es')} m s.n.m.`]);
+  if (terrainM != null) items.push([`Terreno (${cond.terrainSource ?? 'Open-Meteo'})`, `${Math.round(terrainM).toLocaleString('es')} m s.n.m.`]);
 
   el.innerHTML = `
     <h3>Condiciones de vuelo${loading ? ' <span class="spinner inline"></span>' : ''}</h3>
@@ -585,7 +616,7 @@ function renderConditions() {
       <div><strong>${v.title}</strong>${verdict.reasons.length ? `<small>${esc(verdict.reasons.join(' · '))}</small>` : ''}</div>
     </div>
     <dl class="grid">${items.map(([k, val]) => `<div><dt>${k}</dt><dd>${esc(val)}</dd></div>`).join('')}</dl>
-    <p class="muted small">Datos: Open-Meteo · NOAA SWPC${w ? ` · ${time(w.time)}` : ''}. Umbrales orientativos: revisa los límites de tu dron.</p>`;
+    <p class="muted small">Datos: Open-Meteo · NOAA SWPC${cond.terrainSource === 'ArcGIS' ? ' · Esri' : ''}${w ? ` · ${time(w.time)}` : ''}. Umbrales orientativos: revisa los límites de tu dron.</p>`;
 }
 
 function renderGps() {
@@ -917,16 +948,41 @@ $('#base-layers').addEventListener('change', (e) => {
   setBaseLayer(e.target.value);
 });
 
-$('#keys-form').addEventListener('submit', (e) => {
+$('#keys-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
+  const previousArcgis = state.keys.arcgis;
   state.keys = saveKeys(data);
   // Una clave nueva invalida las sesiones de Google guardadas.
   for (const key of Object.keys(localStorage)) if (key.startsWith('googleSession:')) storage.remove(key);
   renderBaseChips();
   toast('Claves guardadas en este dispositivo');
   if (BASEMAPS[state.base].needs) setBaseLayer(state.base);
+
+  if (!state.keys.arcgis) {
+    storage.remove('arcgisCaps');
+  } else if (state.keys.arcgis !== previousArcgis || !storage.getJSON('arcgisCaps')) {
+    $('#arcgis-status').textContent = 'Comprobando la clave de ArcGIS…';
+    const caps = await validateArcgisKey(state.keys.arcgis);
+    const ok = [caps.basemaps && 'mapas', caps.geocode && 'búsqueda', caps.elevation && 'elevación'].filter(Boolean);
+    toast(ok.length ? `ArcGIS activo: ${ok.join(', ')}` : 'ArcGIS rechazó la clave: revisa que sea válida y sus privilegios');
+    // La elevación cacheada pudo venir de otra fuente: se vuelve a pedir.
+    cond.terrainPoint = null;
+    refreshConditions();
+  }
+  renderArcgisStatus();
 });
+
+function renderArcgisStatus() {
+  const el = $('#arcgis-status');
+  if (!state.keys.arcgis) {
+    el.textContent = 'ArcGIS: sin clave. Se usan Nominatim (búsqueda) y Open-Meteo (elevación).';
+    return;
+  }
+  const caps = arcgisCapabilities(state.keys.arcgis);
+  const mark = (v) => (v ? '✓' : '✗');
+  el.textContent = `ArcGIS: mapas ${mark(caps.basemaps)} · búsqueda ${mark(caps.geocode)} · elevación ${mark(caps.elevation)}. Lo que falte usa las fuentes gratuitas.`;
+}
 
 $('#layer-list').addEventListener('change', (e) => {
   const id = e.target.dataset.layer;
@@ -1039,16 +1095,11 @@ $('#search').addEventListener('submit', async (e) => {
     }
   }
 
-  const params = new URLSearchParams({ q, format: 'jsonv2', limit: '6', 'accept-language': 'es', countrycodes: state.country.code.toLowerCase() });
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
-    const results = await res.json();
+    const results = await searchPlaces(q);
     list.innerHTML = results.length
       ? results
-          .map((r) => {
-            const [name, ...rest] = r.display_name.split(', ');
-            return `<li><button type="button" data-lat="${r.lat}" data-lon="${r.lon}">${esc(name)}<small>${esc(rest.join(', '))}</small></button></li>`;
-          })
+          .map((r) => `<li><button type="button" data-lat="${r.lat}" data-lon="${r.lon}">${esc(r.name)}<small>${esc(r.detail)}</small></button></li>`)
           .join('')
       : '<li class="muted small" style="padding:10px">Sin resultados</li>';
     list.hidden = false;
@@ -1056,6 +1107,26 @@ $('#search').addEventListener('submit', async (e) => {
     toast('No se pudo buscar. Revisa tu conexión.');
   }
 });
+
+// Búsqueda con ArcGIS si la clave tiene geocodificación; si no, o si falla, Nominatim (OSM).
+async function searchPlaces(q) {
+  const { key, caps } = arcgis();
+  if (caps.geocode) {
+    try {
+      const c = map.getCenter();
+      return await arcgisGeocode(q, { key, countryCode: state.country.code, near: [c.lat, c.lng] });
+    } catch {
+      /* se usa Nominatim */
+    }
+  }
+  const params = new URLSearchParams({ q, format: 'jsonv2', limit: '6', 'accept-language': 'es', countrycodes: state.country.code.toLowerCase() });
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+  const results = await res.json();
+  return results.map((r) => {
+    const [name, ...rest] = r.display_name.split(', ');
+    return { lat: r.lat, lon: r.lon, name, detail: rest.join(', ') };
+  });
+}
 
 $('#search-results').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-lat]');
@@ -1104,6 +1175,7 @@ $('#country').innerHTML = COUNTRIES.map((c) => `<option value="${c.code}">${c.na
 $('#country').addEventListener('change', (e) => switchCountry(e.target.value));
 renderBaseChips();
 renderKeyFields();
+renderArcgisStatus();
 renderDroneSelect();
 updateLocateButton();
 if (!BASEMAPS[state.base]) state.base = 'claro';

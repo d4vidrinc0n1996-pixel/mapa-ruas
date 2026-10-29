@@ -1,8 +1,8 @@
 // Service worker: app instalable y uso sin conexión con los últimos datos descargados.
 
-const SHELL_CACHE = 'mapa-ruas-shell-v7';
-const DATA_CACHE = 'mapa-ruas-data-v7';
-const TILE_CACHE = 'mapa-ruas-tiles-v7';
+const SHELL_CACHE = 'mapa-ruas-shell-v8';
+const DATA_CACHE = 'mapa-ruas-data-v8';
+const TILE_CACHE = 'mapa-ruas-tiles-v8';
 const MAX_TILES = 2000;
 
 const SHELL = [
@@ -10,6 +10,7 @@ const SHELL = [
   'index.html',
   'css/app.css',
   'js/app.js',
+  'js/arcgis.js',
   'js/basemaps.js',
   'js/conditions.js',
   'js/dji.js',

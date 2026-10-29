@@ -47,9 +47,16 @@ App web progresiva (PWA) para ver las zonas permitidas y restringidas de vuelo p
   - Salida y puesta del sol.
   - Índice geomagnético Kp (NOAA SWPC).
   - Un veredicto con umbrales orientativos (`LIMITS` en `js/conditions.js`).
+- **ArcGIS (Esri) con clave propia** de [developers.arcgis.com](https://developers.arcgis.com).
+  - Al guardarla, la app comprueba qué servicios permite y lo muestra (✓/✗).
+  - Mapas base: exterior, navegación, comunidad, y satélite con etiquetas detalladas.
+  - Búsqueda de lugares, más precisa que Nominatim. Sus resultados no se almacenan.
+  - Elevación del terreno, con mejor resolución que el modelo de 90 m. Se usa para la altura máxima real y la lista de sitios cercanos.
+  - Si un servicio no está permitido o falla, se usa la fuente gratuita: Nominatim u Open-Meteo.
+  - Privilegios necesarios: *Basemap styles*, *Geocoding* y *Elevation*. Restringe la clave a tu dominio en *Referrer URLs*.
 - **Mapas base:**
   - Sin clave: OSM, claro, oscuro, calles, satélite, híbrido, topográfico y relieve.
-  - Con clave propia: Mapbox, MapTiler y Google (Map Tiles API).
+  - Con clave propia: ArcGIS, Mapbox, MapTiler y Google (Map Tiles API).
   - Las claves se guardan solo en el dispositivo (panel Capas → Claves de API) y no van al repositorio. Restríngelas a tu dominio en el panel de cada proveedor.
 - **Zonas propias.** Importa un GeoJSON (ver `data/ejemplo-zonas.geojson`).
 - **Uso sin conexión.** La app, los últimos datos descargados (zonas, clima) y las teselas gratuitas visitadas quedan en caché.
@@ -88,6 +95,7 @@ js/basemaps.js          Mapas base gratuitos y con clave
 js/conditions.js        Clima, sol, elevación del terreno e índice Kp
 js/pois.js              Sitios de interés coloreados según el estado de vuelo
 js/dji.js               Zonas GEO de DJI FlySafe y lista de modelos
+js/arcgis.js            Búsqueda y elevación de ArcGIS (con clave) y validación de la clave
 data/co/                Sitios destacados y miradores/cascadas de OSM
 tools/update-osm-sitios.mjs  Regenera los miradores y cascadas desde OpenStreetMap
 js/render.js            Dibujo de zonas en Leaflet

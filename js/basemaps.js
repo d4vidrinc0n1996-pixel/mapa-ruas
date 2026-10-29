@@ -2,12 +2,14 @@
 // en su dispositivo (nunca en el repositorio).
 
 import { storage } from './storage.js';
+import { STATIC_TILES } from './arcgis.js';
 
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
 const OSM_ATTR = '&copy; colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const ESRI_ATTR = 'Mapa &copy; Esri y sus proveedores';
 
 export const PROVIDERS = {
+  arcgis: { label: 'ArcGIS (Esri)', help: 'Clave de developers.arcgis.com (AAPT…): mapas, búsqueda y elevación' },
   mapbox: { label: 'Mapbox', help: 'Token público (pk.…) de account.mapbox.com' },
   maptiler: { label: 'MapTiler', help: 'Clave de cloud.maptiler.com' },
   google: { label: 'Google Maps', help: 'Clave con la «Map Tiles API» habilitada' },
@@ -52,6 +54,31 @@ export const BASEMAPS = {
         attribution: `${OSM_ATTR}, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)`,
         maxZoom: 17,
       },
+    ],
+  },
+  // Servicio de teselas estáticas de ArcGIS: 512 px, la clave va como token.
+  arcgisOutdoor: {
+    label: 'ArcGIS exterior',
+    needs: 'arcgis',
+    tiles: [{ url: `${STATIC_TILES}/arcgis/outdoor/static/tile/{z}/{y}/{x}?token={key}`, ...arcgisTile() }],
+  },
+  arcgisNavigation: {
+    label: 'ArcGIS navegación',
+    needs: 'arcgis',
+    tiles: [{ url: `${STATIC_TILES}/arcgis/navigation/static/tile/{z}/{y}/{x}?token={key}`, ...arcgisTile() }],
+  },
+  arcgisCommunity: {
+    label: 'ArcGIS comunidad',
+    needs: 'arcgis',
+    tiles: [{ url: `${STATIC_TILES}/arcgis/community/static/tile/{z}/{y}/{x}?token={key}`, ...arcgisTile() }],
+  },
+  // Satélite gratuito de Esri con las etiquetas detalladas del servicio con clave.
+  arcgisHybrid: {
+    label: 'ArcGIS satélite',
+    needs: 'arcgis',
+    tiles: [
+      { url: `${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, attribution: 'Imágenes &copy; Esri, Maxar, Earthstar Geographics', maxZoom: 19 },
+      { url: `${STATIC_TILES}/arcgis/imagery/labels/static/tile/{z}/{y}/{x}?token={key}`, ...arcgisTile(), attribution: '' },
     ],
   },
   mapboxSat: {
@@ -106,6 +133,10 @@ export const BASEMAPS = {
   googleMapa: { label: 'Google mapa', needs: 'google', google: { mapType: 'roadmap' } },
   googleRelieve: { label: 'Google relieve', needs: 'google', google: { mapType: 'terrain', layerTypes: ['layerRoadmap'] } },
 };
+
+function arcgisTile() {
+  return { attribution: 'Powered by <a href="https://www.esri.com">Esri</a> | &copy; Esri y sus proveedores', tileSize: 512, zoomOffset: -1, maxZoom: 20 };
+}
 
 export function getKeys() {
   return storage.getJSON('apiKeys') ?? {};
