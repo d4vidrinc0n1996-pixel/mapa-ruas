@@ -54,6 +54,12 @@ App web progresiva (PWA) para ver las zonas permitidas y restringidas de vuelo p
   - Elevación del terreno, con mejor resolución que el modelo de 90 m. Se usa para la altura máxima real y la lista de sitios cercanos.
   - Si un servicio no está permitido o falla, se usa la fuente gratuita: Nominatim u Open-Meteo.
   - Privilegios necesarios: *Basemap styles*, *Geocoding* y *Elevation*. Restringe la clave a tu dominio en *Referrer URLs*.
+- **Capas meteorológicas** (gratuitas, sin clave; en *Capas → Meteorología*):
+  - **Nubes:** imagen del satélite GOES-East en color (NASA GIBS), cada 10 min con ~1 h de retraso.
+  - **Tormentas:** infrarrojo del mismo satélite; los topes de nube fríos (tormentas) salen en amarillo y rojo.
+  - **Lluvia:** radar de RainViewer, con la cobertura que den los radares disponibles.
+  - **Viento:** cuadrícula de flechas sobre la zona visible (Open-Meteo), a 10 m o a 120 m. Cada flecha apunta hacia donde sopla el viento y su color indica la velocidad.
+  - Las capas se refrescan solas cada 10 minutos. La opacidad del satélite es ajustable.
 - **Mapas base:**
   - Sin clave: OSM, claro, oscuro, calles, satélite, híbrido, topográfico y relieve.
   - Con clave propia: ArcGIS, Mapbox, MapTiler y Google (Map Tiles API).
@@ -96,6 +102,7 @@ js/conditions.js        Clima, sol, elevación del terreno e índice Kp
 js/pois.js              Sitios de interés coloreados según el estado de vuelo
 js/dji.js               Zonas GEO de DJI FlySafe y lista de modelos
 js/arcgis.js            Búsqueda y elevación de ArcGIS (con clave) y validación de la clave
+js/overlays.js          Capas de nubes, tormentas, lluvia y viento
 data/co/                Sitios destacados y miradores/cascadas de OSM
 tools/update-osm-sitios.mjs  Regenera los miradores y cascadas desde OpenStreetMap
 js/render.js            Dibujo de zonas en Leaflet

@@ -8,6 +8,7 @@ import { fetchWeather, fetchElevation, fetchElevations, fetchKp, assess, describ
 import { PoiLayer, POI_TYPES, STATUS_COLORS, poiName } from './pois.js';
 import { DJI_LAYER, djiLevel, fetchDrones, getDrone, setDrone } from './dji.js';
 import { arcgisCapabilities, validateArcgisKey, arcgisGeocode, arcgisElevation, arcgisElevations } from './arcgis.js';
+import { OVERLAYS } from './overlays.js';
 import { storage } from './storage.js';
 import { haversine, formatDistance, formatCoord } from './geo.js';
 
@@ -107,7 +108,10 @@ const map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([4.
 L.control.zoom({ position: 'topright' }).addTo(map);
 L.control.scale({ imperial: false, position: 'topleft' }).addTo(map);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
-// Los sitios de interés van por encima de todas las zonas.
+// Orden: mapa base < nubes/lluvia (350) < zonas (401+) < flechas de viento (445) < sitios (450).
+map.createPane('weather').style.zIndex = '350';
+map.createPane('wind').style.zIndex = '445';
+map.getPane('wind').style.pointerEvents = 'none';
 map.createPane('pois').style.zIndex = '450';
 
 let baseLayers = [];
@@ -1015,6 +1019,74 @@ fetchDrones().then((drones) => {
   renderStatus();
 });
 
+// ---------- Capas meteorológicas ----------
+const overlayState = {
+  active: new Set(storage.getJSON('weatherLayers') ?? []),
+  windHeight: Number(storage.get('windHeight')) || 10,
+  opacity: Number(storage.get('satOpacity')) || 0.7,
+};
+const overlayInstances = new Map();
+
+function overlay(id) {
+  let inst = overlayInstances.get(id);
+  if (!inst) {
+    inst = OVERLAYS[id].create(map);
+    inst.opacity = overlayState.opacity;
+    if (id === 'viento') inst.height = overlayState.windHeight;
+    inst.onError = () => toast('No se pudo consultar el viento. Revisa tu conexión.');
+    inst.onUpdate = () => renderOverlayPanel();
+    overlayInstances.set(id, inst);
+  }
+  return inst;
+}
+
+async function setOverlay(id, on) {
+  if (on) overlayState.active.add(id);
+  else overlayState.active.delete(id);
+  storage.setJSON('weatherLayers', [...overlayState.active]);
+  try {
+    if (on) await overlay(id).show();
+    else overlay(id).hide();
+  } catch {
+    toast(`No se pudo cargar: ${OVERLAYS[id].label}`);
+  }
+  renderOverlayPanel();
+}
+
+function renderOverlayPanel() {
+  $('#overlay-list').innerHTML = Object.entries(OVERLAYS)
+    .map(
+      ([id, o]) => `
+        <label class="layer-row">
+          <input type="checkbox" data-overlay="${id}" ${overlayState.active.has(id) ? 'checked' : ''}>
+          <span class="poi-swatch">${{ nubes: '☁️', tormentas: '⛈️', lluvia: '🌧️', viento: '🧭' }[id]}</span>
+          <span><strong>${esc(o.label)}</strong><small>${esc(o.legend)}</small></span>
+        </label>`,
+    )
+    .join('');
+  $('#wind-height').value = String(overlayState.windHeight);
+  $('#sat-opacity').value = String(overlayState.opacity);
+  const info = [...overlayState.active].map((id) => overlayInstances.get(id)?.info).filter(Boolean);
+  $('#overlay-info').textContent = info.join(' · ');
+}
+
+$('#overlay-list').addEventListener('change', (e) => {
+  const id = e.target.dataset.overlay;
+  if (id) setOverlay(id, e.target.checked);
+});
+
+$('#wind-height').addEventListener('change', (e) => {
+  overlayState.windHeight = Number(e.target.value);
+  storage.set('windHeight', e.target.value);
+  overlayInstances.get('viento')?.setHeight(overlayState.windHeight);
+});
+
+$('#sat-opacity').addEventListener('input', (e) => {
+  overlayState.opacity = Number(e.target.value);
+  storage.set('satOpacity', e.target.value);
+  for (const id of ['nubes', 'tormentas', 'lluvia']) overlayInstances.get(id)?.setOpacity(overlayState.opacity);
+});
+
 $('#poi-list').addEventListener('change', (e) => {
   const id = e.target.dataset.poi;
   const layer = poiLayers.find((p) => p.def.id === id);
@@ -1177,6 +1249,8 @@ renderBaseChips();
 renderKeyFields();
 renderArcgisStatus();
 renderDroneSelect();
+renderOverlayPanel();
+for (const id of overlayState.active) if (OVERLAYS[id]) setOverlay(id, true);
 updateLocateButton();
 if (!BASEMAPS[state.base]) state.base = 'claro';
 setBaseLayer(state.base);

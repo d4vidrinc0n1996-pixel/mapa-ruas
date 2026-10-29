@@ -77,6 +77,26 @@
           <button class="btn small" type="submit">Guardar claves</button>
         </form>
       </details>
+      <h3>Meteorología</h3>
+      <div id="overlay-list" class="layer-list"></div>
+      <div class="overlay-controls">
+        <label>
+          <span>Viento a</span>
+          <select id="wind-height">
+            <option value="10">10 m</option>
+            <option value="120">120 m</option>
+          </select>
+        </label>
+        <label>
+          <span>Opacidad satélite</span>
+          <input type="range" id="sat-opacity" min="0.2" max="1" step="0.1" />
+        </label>
+      </div>
+      <div class="wind-legend" aria-label="Velocidad del viento">
+        <span style="--c: #16a34a">&lt; 15</span><span style="--c: #84cc16">15–25</span><span style="--c: #eab308">25–35</span
+        ><span style="--c: #f97316">35–45</span><span style="--c: #dc2626">≥ 45 km/h</span>
+      </div>
+      <p id="overlay-info" class="muted small"></p>
       <h3>Sitios de interés</h3>
       <div id="poi-list" class="layer-list"></div>
       <label class="layer-row">
